@@ -1,0 +1,2706 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>CINAMON</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #111;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #wrap {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    canvas {
+      display: block;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      background: #000;
+    }
+
+    /* Mobile Controls */
+    #mobile-controls {
+      display: none;
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 45%;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    #dpad {
+      position: absolute;
+      left: 5%;
+      bottom: 15%;
+      width: 140px;
+      height: 140px;
+      pointer-events: auto;
+    }
+
+    .dpad-btn {
+      position: absolute;
+      width: 46px;
+      height: 46px;
+      background: rgba(255, 255, 255, 0.25);
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .dpad-btn::after {
+      color: #fff;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .dpad-up {
+      left: 47px;
+      top: 0;
+    }
+
+    .dpad-up::after {
+      content: '▲';
+    }
+
+    .dpad-down {
+      left: 47px;
+      bottom: 0;
+    }
+
+    .dpad-down::after {
+      content: '▼';
+    }
+
+    .dpad-left {
+      left: 0;
+      top: 47px;
+    }
+
+    .dpad-left::after {
+      content: '◀';
+    }
+
+    .dpad-right {
+      right: 0;
+      top: 47px;
+    }
+
+    .dpad-right::after {
+      content: '▶';
+    }
+
+    #action-btns {
+      position: absolute;
+      right: 5%;
+      bottom: 15%;
+      width: 130px;
+      height: 90px;
+      pointer-events: auto;
+    }
+
+    .act-btn {
+      position: absolute;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    #btn-a {
+      right: 0;
+      top: 0;
+      background: rgba(220, 50, 50, 0.45);
+    }
+
+    #btn-b {
+      left: 10px;
+      top: 30px;
+      background: rgba(50, 50, 220, 0.45);
+    }
+
+    #btn-start {
+      position: absolute;
+      right: 25%;
+      bottom: 5%;
+      width: 50px;
+      height: 26px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ccc;
+      font-size: 10px;
+      pointer-events: auto;
+      letter-spacing: 1px;
+    }
+
+    #btn-menu {
+      position: absolute;
+      left: 40%;
+      bottom: 5%;
+      width: 50px;
+      height: 26px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ccc;
+      font-size: 10px;
+      pointer-events: auto;
+      letter-spacing: 1px;
+    }
+
+    .dpad-btn:active,
+    .act-btn:active,
+    #btn-start:active,
+    #btn-menu:active {
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    @media (pointer: coarse),
+    (hover: none) {
+      #mobile-controls {
+        display: block;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="wrap">
+    <canvas id="gc"></canvas>
+    <div id="mobile-controls">
+      <div id="dpad">
+        <div class="dpad-btn dpad-up" data-key="up"></div>
+        <div class="dpad-btn dpad-down" data-key="down"></div>
+        <div class="dpad-btn dpad-left" data-key="left"></div>
+        <div class="dpad-btn dpad-right" data-key="right"></div>
+      </div>
+      <div id="action-btns">
+        <div class="act-btn" id="btn-a" data-key="a">A</div>
+        <div class="act-btn" id="btn-b" data-key="b">B</div>
+      </div>
+      <div id="btn-start" data-key="start">START</div>
+      <div id="btn-menu" data-key="select">SELECT</div>
+    </div>
+  </div>
+
+  <script>
+    // ═══════════════════════════════════════════════════════════════
+    // CINAMON - A Pokemon-style HTML5 Game
+    // ═══════════════════════════════════════════════════════════════
+
+    // ═══════════════════════════════════════════════════════════════
+    // CHIPTUNE SOUNDTRACK ENGINE
+    // ═══════════════════════════════════════════════════════════════
+
+    let audioCtx = null;
+    let masterGain = null;
+    let musicPlaying = false;
+    let currentTrack = null;
+    let musicScheduler = null;
+    let nextNoteTime = 0;
+    let musicStep = 0;
+
+    // Note frequencies (Hz)
+    const NOTE = {
+      C3: 131, D3: 147, E3: 165, F3: 175, G3: 196, A3: 220, B3: 247,
+      C4: 262, D4: 294, E4: 330, F4: 349, G4: 392, A4: 440, B4: 494,
+      C5: 523, D5: 587, E5: 659, F5: 698, G5: 784, A5: 880, B5: 988,
+      C6: 1047,
+      R: 0, // rest
+    };
+
+    // ── Music Tracks (note arrays: [freq, duration in 16ths]) ──
+
+    const TRACKS = {
+      // Title screen - upbeat, adventurous (Pokemon title vibes)
+      title: {
+        bpm: 140,
+        melody: [
+          [NOTE.E5, 2], [NOTE.G5, 2], [NOTE.B5, 2], [NOTE.G5, 2],
+          [NOTE.E5, 2], [NOTE.G5, 2], [NOTE.B5, 2], [NOTE.C6, 2],
+          [NOTE.B5, 2], [NOTE.G5, 2], [NOTE.E5, 2], [NOTE.G5, 2],
+          [NOTE.A5, 4], [NOTE.G5, 4],
+          [NOTE.E5, 2], [NOTE.G5, 2], [NOTE.B5, 2], [NOTE.G5, 2],
+          [NOTE.A5, 2], [NOTE.B5, 2], [NOTE.C6, 2], [NOTE.B5, 2],
+          [NOTE.A5, 2], [NOTE.G5, 2], [NOTE.E5, 2], [NOTE.D5, 2],
+          [NOTE.E5, 4], [NOTE.R, 4],
+          // B section - arpeggios (Terraria day theme vibe)
+          [NOTE.C5, 1], [NOTE.E5, 1], [NOTE.G5, 1], [NOTE.C6, 1],
+          [NOTE.G5, 1], [NOTE.E5, 1], [NOTE.C5, 1], [NOTE.E5, 1],
+          [NOTE.D5, 1], [NOTE.F5, 1], [NOTE.A5, 1], [NOTE.D6, 1],
+          [NOTE.A5, 1], [NOTE.F5, 1], [NOTE.D5, 1], [NOTE.F5, 1],
+          [NOTE.E5, 1], [NOTE.G5, 1], [NOTE.B5, 1], [NOTE.E6, 1],
+          [NOTE.B5, 1], [NOTE.G5, 1], [NOTE.E5, 1], [NOTE.G5, 1],
+          [NOTE.A5, 2], [NOTE.G5, 2], [NOTE.E5, 2], [NOTE.G5, 2],
+          [NOTE.E5, 4], [NOTE.R, 4],
+        ],
+        bass: [
+          [NOTE.C3, 4], [NOTE.C3, 4], [NOTE.G3, 4], [NOTE.G3, 4],
+          [NOTE.A3, 4], [NOTE.A3, 4], [NOTE.E3, 4], [NOTE.E3, 4],
+          [NOTE.C3, 4], [NOTE.C3, 4], [NOTE.F3, 4], [NOTE.F3, 4],
+          [NOTE.G3, 4], [NOTE.G3, 4], [NOTE.C3, 4], [NOTE.C3, 4],
+          [NOTE.A3, 4], [NOTE.A3, 4], [NOTE.G3, 4], [NOTE.G3, 4],
+          [NOTE.F3, 4], [NOTE.F3, 4], [NOTE.E3, 4], [NOTE.E3, 4],
+        ],
+      },
+
+      // Town - peaceful, warm (Pokemon route/town + Terraria day vibes)
+      town: {
+        bpm: 120,
+        melody: [
+          [NOTE.E4, 4], [NOTE.G4, 4], [NOTE.A4, 4], [NOTE.G4, 4],
+          [NOTE.E4, 4], [NOTE.D4, 4], [NOTE.E4, 8],
+          [NOTE.G4, 4], [NOTE.A4, 4], [NOTE.B4, 4], [NOTE.A4, 4],
+          [NOTE.G4, 4], [NOTE.E4, 4], [NOTE.D4, 8],
+          [NOTE.E4, 4], [NOTE.G4, 4], [NOTE.A4, 4], [NOTE.B4, 4],
+          [NOTE.C5, 4], [NOTE.B4, 4], [NOTE.A4, 4], [NOTE.G4, 4],
+          [NOTE.A4, 4], [NOTE.G4, 4], [NOTE.E4, 4], [NOTE.D4, 4],
+          [NOTE.E4, 8], [NOTE.R, 8],
+          // B section - arpeggiated chords (Terraria night theme vibe)
+          [NOTE.C5, 1], [NOTE.E5, 1], [NOTE.G5, 1], [NOTE.E5, 1],
+          [NOTE.C5, 1], [NOTE.E5, 1], [NOTE.G5, 1], [NOTE.E5, 1],
+          [NOTE.D5, 1], [NOTE.F5, 1], [NOTE.A5, 1], [NOTE.F5, 1],
+          [NOTE.D5, 1], [NOTE.F5, 1], [NOTE.A5, 1], [NOTE.F5, 1],
+          [NOTE.E5, 1], [NOTE.G5, 1], [NOTE.B5, 1], [NOTE.G5, 1],
+          [NOTE.E5, 1], [NOTE.G5, 1], [NOTE.B5, 1], [NOTE.G5, 1],
+          [NOTE.A4, 2], [NOTE.B4, 2], [NOTE.C5, 2], [NOTE.E5, 2],
+          [NOTE.D5, 4], [NOTE.C5, 4],
+        ],
+        bass: [
+          [NOTE.C3, 8], [NOTE.G3, 8],
+          [NOTE.A3, 8], [NOTE.E3, 8],
+          [NOTE.F3, 8], [NOTE.C3, 8],
+          [NOTE.G3, 8], [NOTE.C3, 8],
+          [NOTE.A3, 8], [NOTE.E3, 8],
+          [NOTE.F3, 8], [NOTE.G3, 8],
+          [NOTE.C3, 8], [NOTE.R, 8],
+        ],
+      },
+
+      // Wild battle - intense, fast (Pokemon wild battle vibes)
+      battle: {
+        bpm: 160,
+        melody: [
+          [NOTE.E5, 2], [NOTE.E5, 2], [NOTE.R, 2], [NOTE.E5, 2],
+          [NOTE.R, 2], [NOTE.C5, 2], [NOTE.E5, 4],
+          [NOTE.G5, 4], [NOTE.R, 4], [NOTE.G4, 4], [NOTE.R, 4],
+          [NOTE.C5, 4], [NOTE.R, 2], [NOTE.B4, 2], [NOTE.A4, 4],
+          [NOTE.G4, 2], [NOTE.E5, 2], [NOTE.G5, 2], [NOTE.A5, 2],
+          [NOTE.F5, 4], [NOTE.G5, 4], [NOTE.E5, 4], [NOTE.C5, 4],
+          [NOTE.D5, 2], [NOTE.D5, 2], [NOTE.R, 2], [NOTE.D5, 2],
+          [NOTE.R, 2], [NOTE.B4, 2], [NOTE.D5, 4],
+          [NOTE.F5, 4], [NOTE.R, 2], [NOTE.E5, 2], [NOTE.D5, 4],
+          [NOTE.C5, 4], [NOTE.R, 4], [NOTE.R, 8],
+          // Fast arpeggios
+          [NOTE.E5, 1], [NOTE.G5, 1], [NOTE.B5, 1], [NOTE.E6, 1],
+          [NOTE.B5, 1], [NOTE.G5, 1], [NOTE.E5, 1], [NOTE.G5, 1],
+          [NOTE.C5, 1], [NOTE.E5, 1], [NOTE.G5, 1], [NOTE.C6, 1],
+          [NOTE.G5, 1], [NOTE.E5, 1], [NOTE.C5, 1], [NOTE.E5, 1],
+          [NOTE.D5, 1], [NOTE.F5, 1], [NOTE.A5, 1], [NOTE.D6, 1],
+          [NOTE.A5, 1], [NOTE.F5, 1], [NOTE.D5, 1], [NOTE.F5, 1],
+          [NOTE.E5, 2], [NOTE.D5, 2], [NOTE.C5, 2], [NOTE.B4, 2],
+          [NOTE.C5, 4], [NOTE.R, 4],
+        ],
+        bass: [
+          [NOTE.E3, 2], [NOTE.E3, 2], [NOTE.R, 2], [NOTE.E3, 2],
+          [NOTE.C3, 2], [NOTE.C3, 2], [NOTE.G3, 2], [NOTE.G3, 2],
+          [NOTE.A3, 2], [NOTE.A3, 2], [NOTE.E3, 2], [NOTE.E3, 2],
+          [NOTE.F3, 2], [NOTE.F3, 2], [NOTE.G3, 2], [NOTE.G3, 2],
+          [NOTE.E3, 2], [NOTE.E3, 2], [NOTE.R, 2], [NOTE.E3, 2],
+          [NOTE.C3, 2], [NOTE.C3, 2], [NOTE.G3, 2], [NOTE.G3, 2],
+          [NOTE.F3, 2], [NOTE.F3, 2], [NOTE.G3, 2], [NOTE.G3, 2],
+          [NOTE.C3, 4], [NOTE.R, 4],
+        ],
+      },
+
+      // Gym battle - epic, climactic (Pokemon gym leader vibes)
+      gymBattle: {
+        bpm: 150,
+        melody: [
+          [NOTE.B4, 2], [NOTE.C5, 2], [NOTE.D5, 2], [NOTE.E5, 2],
+          [NOTE.F5, 2], [NOTE.E5, 2], [NOTE.D5, 2], [NOTE.C5, 2],
+          [NOTE.B4, 2], [NOTE.A4, 2], [NOTE.G4, 2], [NOTE.A4, 2],
+          [NOTE.B4, 4], [NOTE.R, 2], [NOTE.E5, 2],
+          [NOTE.G5, 2], [NOTE.F5, 2], [NOTE.E5, 2], [NOTE.D5, 2],
+          [NOTE.C5, 2], [NOTE.D5, 2], [NOTE.E5, 2], [NOTE.C5, 2],
+          [NOTE.A4, 2], [NOTE.B4, 2], [NOTE.C5, 2], [NOTE.D5, 2],
+          [NOTE.E5, 4], [NOTE.R, 4],
+          // Epic arpeggio section
+          [NOTE.E5, 1], [NOTE.A5, 1], [NOTE.C6, 1], [NOTE.E6, 1],
+          [NOTE.C6, 1], [NOTE.A5, 1], [NOTE.E5, 1], [NOTE.A5, 1],
+          [NOTE.D5, 1], [NOTE.G5, 1], [NOTE.B5, 1], [NOTE.D6, 1],
+          [NOTE.B5, 1], [NOTE.G5, 1], [NOTE.D5, 1], [NOTE.G5, 1],
+          [NOTE.C5, 1], [NOTE.E5, 1], [NOTE.A5, 1], [NOTE.C6, 1],
+          [NOTE.A5, 1], [NOTE.E5, 1], [NOTE.C5, 1], [NOTE.E5, 1],
+          [NOTE.B4, 2], [NOTE.C5, 2], [NOTE.D5, 2], [NOTE.E5, 2],
+          [NOTE.E5, 4], [NOTE.R, 4],
+        ],
+        bass: [
+          [NOTE.E3, 2], [NOTE.E3, 2], [NOTE.A3, 2], [NOTE.A3, 2],
+          [NOTE.F3, 2], [NOTE.F3, 2], [NOTE.G3, 2], [NOTE.G3, 2],
+          [NOTE.E3, 2], [NOTE.E3, 2], [NOTE.C3, 2], [NOTE.C3, 2],
+          [NOTE.D3, 2], [NOTE.D3, 2], [NOTE.E3, 2], [NOTE.E3, 2],
+          [NOTE.A3, 2], [NOTE.A3, 2], [NOTE.F3, 2], [NOTE.F3, 2],
+          [NOTE.G3, 2], [NOTE.G3, 2], [NOTE.C3, 2], [NOTE.C3, 2],
+          [NOTE.D3, 2], [NOTE.D3, 2], [NOTE.E3, 2], [NOTE.E3, 2],
+          [NOTE.E3, 4], [NOTE.R, 4],
+        ],
+      },
+
+      // Victory - triumphant fanfare (Pokemon victory theme)
+      victory: {
+        bpm: 140,
+        melody: [
+          [NOTE.C5, 2], [NOTE.E5, 2], [NOTE.G5, 2], [NOTE.C6, 4],
+          [NOTE.B5, 2], [NOTE.A5, 2], [NOTE.G5, 4], [NOTE.R, 2],
+          [NOTE.E5, 2], [NOTE.G5, 2], [NOTE.B5, 2], [NOTE.E6, 4],
+          [NOTE.D6, 2], [NOTE.C6, 2], [NOTE.B5, 4], [NOTE.R, 2],
+          [NOTE.C5, 2], [NOTE.E5, 2], [NOTE.G5, 2], [NOTE.C6, 2],
+          [NOTE.B5, 2], [NOTE.A5, 2], [NOTE.G5, 2], [NOTE.F5, 2],
+          [NOTE.E5, 2], [NOTE.D5, 2], [NOTE.C5, 2], [NOTE.E5, 2],
+          [NOTE.G5, 4], [NOTE.C6, 4],
+          // Triumphant ending
+          [NOTE.E6, 2], [NOTE.D6, 2], [NOTE.C6, 2], [NOTE.B5, 2],
+          [NOTE.C6, 8], [NOTE.R, 8],
+        ],
+        bass: [
+          [NOTE.C3, 4], [NOTE.G3, 4], [NOTE.C3, 4], [NOTE.G3, 4],
+          [NOTE.A3, 4], [NOTE.E3, 4], [NOTE.A3, 4], [NOTE.E3, 4],
+          [NOTE.F3, 4], [NOTE.C3, 4], [NOTE.F3, 4], [NOTE.C3, 4],
+          [NOTE.G3, 4], [NOTE.C3, 4], [NOTE.C3, 8], [NOTE.R, 8],
+        ],
+      },
+
+      // Route - adventurous walking music (Pokemon route theme)
+      route: {
+        bpm: 130,
+        melody: [
+          [NOTE.G4, 2], [NOTE.A4, 2], [NOTE.B4, 2], [NOTE.C5, 2],
+          [NOTE.D5, 2], [NOTE.C5, 2], [NOTE.B4, 2], [NOTE.A4, 2],
+          [NOTE.G4, 2], [NOTE.F4, 2], [NOTE.E4, 2], [NOTE.D4, 2],
+          [NOTE.E4, 4], [NOTE.G4, 4],
+          [NOTE.A4, 2], [NOTE.B4, 2], [NOTE.C5, 2], [NOTE.D5, 2],
+          [NOTE.E5, 2], [NOTE.D5, 2], [NOTE.C5, 2], [NOTE.B4, 2],
+          [NOTE.A4, 2], [NOTE.G4, 2], [NOTE.F4, 2], [NOTE.E4, 2],
+          [NOTE.G4, 4], [NOTE.R, 4],
+          // B section - bouncy
+          [NOTE.C5, 1], [NOTE.R, 1], [NOTE.E5, 1], [NOTE.R, 1],
+          [NOTE.G5, 1], [NOTE.R, 1], [NOTE.E5, 1], [NOTE.R, 1],
+          [NOTE.D5, 1], [NOTE.R, 1], [NOTE.F5, 1], [NOTE.R, 1],
+          [NOTE.A5, 1], [NOTE.R, 1], [NOTE.F5, 1], [NOTE.R, 1],
+          [NOTE.E5, 1], [NOTE.R, 1], [NOTE.G5, 1], [NOTE.R, 1],
+          [NOTE.B5, 1], [NOTE.R, 1], [NOTE.G5, 1], [NOTE.R, 1],
+          [NOTE.A4, 2], [NOTE.B4, 2], [NOTE.C5, 4],
+          [NOTE.G4, 4], [NOTE.R, 4],
+        ],
+        bass: [
+          [NOTE.C3, 4], [NOTE.G3, 4], [NOTE.A3, 4], [NOTE.E3, 4],
+          [NOTE.F3, 4], [NOTE.C3, 4], [NOTE.G3, 4], [NOTE.C3, 4],
+          [NOTE.A3, 4], [NOTE.E3, 4], [NOTE.F3, 4], [NOTE.G3, 4],
+          [NOTE.C3, 8], [NOTE.R, 8],
+        ],
+      },
+    };
+
+    // Current track state
+    let trackMelody = [];
+    let trackBass = [];
+    let trackMelodyIdx = 0;
+    let trackBassIdx = 0;
+    let trackMelodyTimer = 0;
+    let trackBassTimer = 0;
+    let trackBPM = 120;
+    let trackLoop = true;
+
+    function initAudio() {
+      if (audioCtx) return;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.3;
+      masterGain.connect(audioCtx.destination);
+    }
+
+    function playNote(freq, duration, type, volume, delay) {
+      if (!audioCtx || freq === 0) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      gain.gain.value = 0;
+      osc.connect(gain);
+      gain.connect(masterGain);
+      const t = audioCtx.currentTime + (delay || 0);
+      const dur = duration / 1000;
+      gain.gain.setValueAtTime(volume * 0.3, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.start(t);
+      osc.stop(t + dur);
+    }
+
+    function playSFX(type) {
+      initAudio();
+      if (type === 'select') {
+        playNote(800, 50, 'square', 0.15, 0);
+        playNote(1200, 50, 'square', 0.1, 0.05);
+      } else if (type === 'confirm') {
+        playNote(600, 80, 'square', 0.15, 0);
+        playNote(900, 80, 'square', 0.12, 0.08);
+        playNote(1200, 100, 'square', 0.1, 0.16);
+      } else if (type === 'hit') {
+        playNote(200, 30, 'sawtooth', 0.2, 0);
+        playNote(100, 50, 'sawtooth', 0.15, 0.02);
+      } else if (type === 'catch') {
+        for (let i = 0; i < 6; i++) {
+          playNote(400 + i * 100, 80, 'square', 0.1, i * 0.08);
+        }
+      } else if (type === 'levelup') {
+        playNote(523, 100, 'square', 0.15, 0);
+        playNote(659, 100, 'square', 0.12, 0.12);
+        playNote(784, 100, 'square', 0.12, 0.24);
+        playNote(1047, 200, 'square', 0.1, 0.36);
+      } else if (type === 'heal') {
+        for (let i = 0; i < 4; i++) {
+          playNote(440 + i * 110, 150, 'triangle', 0.1, i * 0.15);
+        }
+      } else if (type === 'encounter') {
+        playNote(200, 60, 'square', 0.2, 0);
+        playNote(300, 60, 'square', 0.18, 0.07);
+        playNote(400, 60, 'square', 0.15, 0.14);
+        playNote(600, 100, 'square', 0.12, 0.21);
+      } else if (type === 'badge') {
+        for (let i = 0; i < 8; i++) {
+          playNote(400 + i * 80, 120, 'square', 0.1, i * 0.1);
+        }
+      }
+    }
+
+    function startMusic(trackName) {
+      initAudio();
+      stopMusic();
+      const track = TRACKS[trackName];
+      if (!track) return;
+      currentTrack = trackName;
+      trackBPM = track.bpm;
+      trackMelody = track.melody;
+      trackBass = track.bass;
+      trackMelodyIdx = 0;
+      trackBassIdx = 0;
+      trackMelodyTimer = 0;
+      trackBassTimer = 0;
+      musicPlaying = true;
+      musicStep = 0;
+    }
+
+    function stopMusic() {
+      musicPlaying = false;
+      currentTrack = null;
+    }
+
+    // Call this from game loop
+    function updateMusic(dt) {
+      if (!musicPlaying || !audioCtx) return;
+      const beatMs = 60000 / trackBPM / 2; // 16th note duration
+
+      // Melody channel
+      trackMelodyTimer -= dt;
+      if (trackMelodyTimer <= 0) {
+        const note = trackMelody[trackMelodyIdx % trackMelody.length];
+        if (note[0] !== NOTE.R) {
+          playNote(note[0], beatMs * note[1] * 0.9, 'square', 0.12, 0);
+        }
+        trackMelodyTimer = beatMs * note[1];
+        trackMelodyIdx++;
+      }
+
+      // Bass channel
+      trackBassTimer -= dt;
+      if (trackBassTimer <= 0) {
+        const note = trackBass[trackBassIdx % trackBass.length];
+        if (note[0] !== NOTE.R) {
+          playNote(note[0], beatMs * note[1] * 0.9, 'triangle', 0.1, 0);
+        }
+        trackBassTimer = beatMs * note[1];
+        trackBassIdx++;
+      }
+    }
+
+    // Map game states to music tracks
+    function getTrackForState() {
+      if (gameState === STATE.TITLE) return 'title';
+      if (gameState === STATE.BATTLE) {
+        if (gymState.gymKey) return 'gymBattle';
+        return 'battle';
+      }
+      if (currentArea === 'town') return 'town';
+      return 'route';
+    }
+
+    // Called from game loop to auto-switch tracks
+    function checkMusic() {
+      const needed = getTrackForState();
+      if (needed !== currentTrack) {
+        startMusic(needed);
+      }
+    }
+
+    const canvas = document.getElementById('gc');
+    const ctx = canvas.getContext('2d');
+
+    // ── Constants ──
+    const TILE = 16;
+    const MAP_W = 30;
+    const MAP_H = 25;
+    const VIEW_W = 18; // tiles visible
+    const VIEW_H = 14;
+    const NATIVE_W = VIEW_W * TILE;
+    const NATIVE_H = (VIEW_H + 4) * TILE; // extra 4 rows for HUD
+
+    canvas.width = NATIVE_W;
+    canvas.height = NATIVE_H;
+
+    // ── Game State Machine ──
+    const STATE = { TITLE: 0, OVERWORLD: 1, BATTLE: 2, MENU: 3, DIALOGUE: 4, TRANSITION: 5, TEAM_MENU: 6, BAG_MENU: 7, GYM: 8 };
+    let gameState = STATE.TITLE;
+    let prevState = STATE.OVERWORLD;
+
+    // ── Input ──
+    const keys = {};
+    const justPressed = {};
+    let inputLock = 0;
+    let musicMuted = false;
+
+    document.addEventListener('keydown', e => {
+      if (!keys[e.key]) justPressed[e.key] = true;
+      keys[e.key] = true;
+      // Init audio on first interaction (browser policy)
+      if (!audioCtx) initAudio();
+      // Mute toggle
+      if (e.key === 'm' || e.key === 'M') {
+        musicMuted = !musicMuted;
+        if (masterGain) masterGain.gain.value = musicMuted ? 0 : 0.3;
+      }
+      e.preventDefault();
+    });
+    document.addEventListener('keyup', e => { keys[e.key] = false; });
+
+    let isPressed = function (action) {
+      switch (action) {
+        case 'up': return keys['ArrowUp'] || keys['w'] || keys['W'];
+        case 'down': return keys['ArrowDown'] || keys['s'] || keys['S'];
+        case 'left': return keys['ArrowLeft'] || keys['a'] || keys['A'];
+        case 'right': return keys['ArrowRight'] || keys['d'] || keys['D'];
+        case 'a': return keys['z'] || keys['Z'] || keys['Enter'] || keys[' '];
+        case 'b': return keys['x'] || keys['X'] || keys['Escape'];
+        case 'start': return keys['Enter'] || keys[' '];
+        case 'select': return keys['Shift'];
+      }
+      return false;
+    };
+
+    let justDown = function (action) {
+      switch (action) {
+        case 'up': return justPressed['ArrowUp'] || justPressed['w'] || justPressed['W'];
+        case 'down': return justPressed['ArrowDown'] || justPressed['s'] || justPressed['S'];
+        case 'left': return justPressed['ArrowLeft'] || justPressed['a'] || justPressed['A'];
+        case 'right': return justPressed['ArrowRight'] || justPressed['d'] || justPressed['D'];
+        case 'a': return justPressed['z'] || justPressed['Z'] || justPressed['Enter'] || justPressed[' '];
+        case 'b': return justPressed['x'] || justPressed['X'] || justPressed['Escape'];
+        case 'start': return justPressed['Enter'] || justPressed[' '];
+        case 'select': return justPressed['Shift'];
+      }
+      return false;
+    };
+
+    // Mobile touch controls
+    const mobileKeys = {};
+    document.querySelectorAll('[data-key]').forEach(el => {
+      const k = el.dataset.key;
+      el.addEventListener('touchstart', e => { e.preventDefault(); mobileKeys[k] = true; if (!audioCtx) initAudio(); });
+      el.addEventListener('touchend', e => { e.preventDefault(); mobileKeys[k] = false; });
+      el.addEventListener('touchcancel', e => { mobileKeys[k] = false; });
+    });
+
+    const origIsPressed = isPressed;
+    const origJustDown = justDown;
+    const mobileMap = { up: 'up', down: 'down', left: 'left', right: 'right', a: 'a', b: 'b', start: 'start', select: 'select' };
+
+    function isPressedMobile(action) {
+      if (mobileKeys[mobileMap[action]]) return true;
+      return origIsPressed(action);
+    }
+    function justDownMobile(action) {
+      if (mobileKeys[mobileMap[action]] && !mobileKeys['_prev_' + action]) {
+        mobileKeys['_prev_' + action] = true;
+        return true;
+      }
+      if (!mobileKeys[mobileMap[action]]) mobileKeys['_prev_' + action] = false;
+      return origJustDown(action);
+    }
+
+    // Override globals
+    isPressed = isPressedMobile;
+    justDown = justDownMobile;
+
+    function clearJustPressed() {
+      for (let k in justPressed) delete justPressed[k];
+    }
+
+    // ── Resize ──
+    function resize() {
+      const ww = window.innerWidth, wh = window.innerHeight;
+      const scale = Math.floor(Math.min(ww / NATIVE_W, wh / NATIVE_H)) || 1;
+      canvas.style.width = (NATIVE_W * scale) + 'px';
+      canvas.style.height = (NATIVE_H * scale) + 'px';
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // ═══════════════════════════════════════════════════════════════
+    // CREATURE DATABASE
+    // ═══════════════════════════════════════════════════════════════
+
+    const TYPES = { NORMAL: 0, FIRE: 1, WATER: 2, GRASS: 3, ELECTRIC: 4, ICE: 5, ROCK: 6, DARK: 7, FLYING: 8, BUG: 9 };
+    const TYPE_NAMES = ['NRM', 'FIR', 'WTR', 'GRA', 'ELC', 'ICE', 'RCK', 'DRK', 'FLY', 'BUG'];
+    const TYPE_COLORS = ['#aaa', '#e44', '#48f', '#4a4', '#da0', '#6cf', '#a84', '#636', '#8af', '#6a3'];
+
+    // Type effectiveness chart (attacker row, defender col)
+    const TYPE_EFF = [
+      //  NRM FIR WTR GRA ELC ICE RCK DRK FLY BUG
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], // NRM
+      [1, .5, .5, 2, 1, 2, .5, 1, 1, 2], // FIR
+      [1, 2, .5, .5, 1, 1, 2, 1, 1, 1], // WTR
+      [1, .5, 2, .5, 1, 1, 2, 1, .5, .5], // GRA
+      [1, 1, 2, .5, .5, 1, 1, 1, 2, 1], // ELC
+      [1, .5, .5, 2, 1, .5, 1, 1, 2, 1], // ICE
+      [1, 2, 1, 1, 1, 2, 1, 1, 2, 2], // RCK
+      [1, 1, 1, 1, 1, 1, 1, .5, 1, 1], // DRK (simplified)
+      [1, 1, 1, 2, .5, 1, .5, 1, 1, 2], // FLY
+      [1, .5, 1, 2, 1, 1, 1, 1, .5, 1], // BUG
+    ];
+
+    function typeEff(atk, def) { return TYPE_EFF[atk][def] || 1; }
+
+    // Creature species data
+    const SPECIES = {
+      sproutling: {
+        name: 'Sproutling', type: TYPES.GRASS, baseHP: 44, baseAtk: 48, baseDef: 50, baseSpd: 43,
+        moves: ['Tackle', 'Vine Whip', 'Razor Leaf', 'Leech Seed'], color: '#4a4', evolveLevel: 16, evolveTo: 'oakshield',
+        desc: 'A tiny seed spirit. Loves sunny meadows.'
+      },
+      flamling: {
+        name: 'Flamling', type: TYPES.FIRE, baseHP: 39, baseAtk: 52, baseDef: 43, baseSpd: 65,
+        moves: ['Scratch', 'Ember', 'Fire Fang', 'Smokescreen'], color: '#e44', evolveLevel: 16, evolveTo: 'blazepaw',
+        desc: 'A fiery cub. Always warm to the touch.'
+      },
+      splasher: {
+        name: 'Splasher', type: TYPES.WATER, baseHP: 48, baseAtk: 48, baseDef: 55, baseSpd: 43,
+        moves: ['Tackle', 'Water Gun', 'Bubble', 'Tail Whip'], color: '#48f', evolveLevel: 16, evolveTo: 'tidalon',
+        desc: 'A cheerful water sprite. Loves rain.'
+      },
+      oakshield: {
+        name: 'Oakshield', type: TYPES.GRASS, baseHP: 60, baseAtk: 62, baseDef: 73, baseSpd: 53,
+        moves: ['Tackle', 'Vine Whip', 'Razor Leaf', 'Leaf Blade'], color: '#2a5', desc: 'A sturdy tree guardian.'
+      },
+      blazepaw: {
+        name: 'Blazepaw', type: TYPES.FIRE, baseHP: 54, baseAtk: 68, baseDef: 52, baseSpd: 85,
+        moves: ['Slash', 'Flamethrower', 'Fire Fang', 'Quick Attack'], color: '#d33', desc: 'Swift as wildfire.'
+      },
+      tidalon: {
+        name: 'Tidalon', type: TYPES.WATER, baseHP: 64, baseAtk: 63, baseDef: 70, baseSpd: 53,
+        moves: ['Water Gun', 'Aqua Tail', 'Hydro Pump', 'Bite'], color: '#33d', desc: 'Commands the tides.'
+      },
+      cinnabee: {
+        name: 'Cinnabee', type: TYPES.BUG, baseHP: 36, baseAtk: 55, baseDef: 30, baseSpd: 70,
+        moves: ['Bug Bite', 'Ember', 'String Shot', 'Agility'], color: '#ca3', desc: 'A cinnamon-scented buzzing bug.'
+      },
+      barksworth: {
+        name: 'Barksworth', type: TYPES.NORMAL, baseHP: 55, baseAtk: 50, baseDef: 48, baseSpd: 45,
+        moves: ['Tackle', 'Bite', 'Headbutt', 'Rest'], color: '#b96', desc: 'A reliable woodland companion.'
+      },
+      shadpaw: {
+        name: 'Shadpaw', type: TYPES.DARK, baseHP: 42, baseAtk: 60, baseDef: 38, baseSpd: 68,
+        moves: ['Scratch', 'Bite', 'Shadow Claw', 'Dark Pulse'], color: '#636', desc: 'Moves silently through the night.'
+      },
+      luminite: {
+        name: 'Luminite', type: TYPES.ELECTRIC, baseHP: 40, baseAtk: 55, baseDef: 35, baseSpd: 75,
+        moves: ['Thunder Shock', 'Spark', 'Quick Attack', 'Thunderbolt'], color: '#da0', desc: 'Glows with crackling energy.'
+      },
+      rockroll: {
+        name: 'Rockroll', type: TYPES.ROCK, baseHP: 60, baseAtk: 65, baseDef: 80, baseSpd: 25,
+        moves: ['Tackle', 'Rock Throw', 'Rock Slide', 'Harden'], color: '#a84', desc: 'Slow but virtually unbreakable.'
+      },
+      zephyra: {
+        name: 'Zephyra', type: TYPES.FLYING, baseHP: 42, baseAtk: 50, baseDef: 40, baseSpd: 72,
+        moves: ['Gust', 'Quick Attack', 'Wing Attack', 'Air Slash'], color: '#8af', desc: 'Soars on gentle breezes.'
+      },
+      frostbite: {
+        name: 'Frostbite', type: TYPES.ICE, baseHP: 45, baseAtk: 58, baseDef: 45, baseSpd: 50,
+        moves: ['Powder Snow', 'Icy Wind', 'Ice Shard', 'Blizzard'], color: '#6cf', desc: 'Leaves frost wherever it walks.'
+      },
+    };
+
+    // Move data
+    const MOVES = {
+      'Tackle': { power: 40, type: TYPES.NORMAL, acc: 100 },
+      'Scratch': { power: 40, type: TYPES.NORMAL, acc: 100 },
+      'Vine Whip': { power: 45, type: TYPES.GRASS, acc: 100 },
+      'Razor Leaf': { power: 55, type: TYPES.GRASS, acc: 95 },
+      'Leech Seed': { power: 30, type: TYPES.GRASS, acc: 90 },
+      'Leaf Blade': { power: 70, type: TYPES.GRASS, acc: 100 },
+      'Ember': { power: 40, type: TYPES.FIRE, acc: 100 },
+      'Fire Fang': { power: 55, type: TYPES.FIRE, acc: 95 },
+      'Flamethrower': { power: 70, type: TYPES.FIRE, acc: 100 },
+      'Smokescreen': { power: 0, type: TYPES.NORMAL, acc: 100 },
+      'Water Gun': { power: 40, type: TYPES.WATER, acc: 100 },
+      'Bubble': { power: 40, type: TYPES.WATER, acc: 100 },
+      'Aqua Tail': { power: 60, type: TYPES.WATER, acc: 90 },
+      'Hydro Pump': { power: 80, type: TYPES.WATER, acc: 80 },
+      'Bubble Beam': { power: 55, type: TYPES.WATER, acc: 100 },
+      'Bug Bite': { power: 45, type: TYPES.BUG, acc: 100 },
+      'String Shot': { power: 0, type: TYPES.BUG, acc: 95 },
+      'Agility': { power: 0, type: TYPES.NORMAL, acc: 100 },
+      'Bite': { power: 50, type: TYPES.DARK, acc: 100 },
+      'Headbutt': { power: 55, type: TYPES.NORMAL, acc: 100 },
+      'Rest': { power: 0, type: TYPES.NORMAL, acc: 100 },
+      'Shadow Claw': { power: 60, type: TYPES.DARK, acc: 100 },
+      'Dark Pulse': { power: 65, type: TYPES.DARK, acc: 100 },
+      'Thunder Shock': { power: 40, type: TYPES.ELECTRIC, acc: 100 },
+      'Spark': { power: 50, type: TYPES.ELECTRIC, acc: 100 },
+      'Quick Attack': { power: 40, type: TYPES.NORMAL, acc: 100 },
+      'Thunderbolt': { power: 70, type: TYPES.ELECTRIC, acc: 100 },
+      'Rock Throw': { power: 50, type: TYPES.ROCK, acc: 90 },
+      'Rock Slide': { power: 65, type: TYPES.ROCK, acc: 90 },
+      'Harden': { power: 0, type: TYPES.ROCK, acc: 100 },
+      'Gust': { power: 40, type: TYPES.FLYING, acc: 100 },
+      'Wing Attack': { power: 55, type: TYPES.FLYING, acc: 100 },
+      'Air Slash': { power: 65, type: TYPES.FLYING, acc: 95 },
+      'Powder Snow': { power: 40, type: TYPES.ICE, acc: 100 },
+      'Icy Wind': { power: 50, type: TYPES.ICE, acc: 95 },
+      'Ice Shard': { power: 40, type: TYPES.ICE, acc: 100 },
+      'Blizzard': { power: 80, type: TYPES.ICE, acc: 80 },
+      'Tail Whip': { power: 0, type: TYPES.NORMAL, acc: 100 },
+      'Slash': { power: 60, type: TYPES.NORMAL, acc: 100 },
+    };
+
+    // Wild encounter tables per area
+    const WILD_TABLE = {
+      route1: ['sproutling', 'flamling', 'splasher', 'barksworth', 'cinnabee'],
+      route2: ['cinnabee', 'shadpaw', 'barksworth', 'rockroll', 'zephyra'],
+      forest: ['sproutling', 'cinnabee', 'zephyra', 'frostbite', 'luminite'],
+      mountain: ['rockroll', 'shadpaw', 'frostbite', 'luminite', 'rockroll'],
+    };
+
+    // ═══════════════════════════════════════════════════════════════
+    // CREATURE FACTORY
+    // ═══════════════════════════════════════════════════════════════
+
+    function createCreature(speciesKey, level) {
+      const sp = SPECIES[speciesKey];
+      const c = {
+        species: speciesKey,
+        name: sp.name,
+        type: sp.type,
+        level: level,
+        exp: 0,
+        expToNext: level * level * 3,
+        hp: 0, maxHP: 0,
+        atk: 0, def: 0, spd: 0,
+        moves: sp.moves.slice(0, 3),
+        status: null,
+        caught: true,
+      };
+      // Stats with some variance and store base stats
+      const v = () => Math.floor(Math.random() * 5) - 2;
+      c.baseMaxHP = Math.floor((sp.baseHP * 2 * level / 100) + level + 10) + v();
+      c.baseAtk = Math.floor((sp.baseAtk * 2 * level / 100) + 5) + v();
+      c.baseDef = Math.floor((sp.baseDef * 2 * level / 100) + 5) + v();
+      c.baseSpd = Math.floor((sp.baseSpd * 2 * level / 100) + 5) + v();
+      if (c.baseMaxHP < 10) c.baseMaxHP = 10;
+      if (c.baseAtk < 5) c.baseAtk = 5;
+      if (c.baseDef < 5) c.baseDef = 5;
+      if (c.baseSpd < 5) c.baseSpd = 5;
+      c.maxHP = c.baseMaxHP;
+      c.atk = c.baseAtk;
+      c.def = c.baseDef;
+      c.spd = c.baseSpd;
+      c.hp = c.maxHP;
+      return c;
+    }
+
+    function expForLevel(lv) { return lv * lv * 3; }
+
+    function recalcCreatureStats(c) {
+      if (!c.baseMaxHP) return;
+      c.maxHP = c.baseMaxHP;
+      c.atk = c.baseAtk;
+      c.def = c.baseDef;
+      c.spd = c.baseSpd;
+      c.hp = Math.min(c.hp, c.maxHP);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // PLAYER / SAVE DATA
+    // ═══════════════════════════════════════════════════════════════
+
+    let player = {
+      x: 14, y: 18,
+      dir: 0, // 0=down,1=up,2=left,3=right
+      team: [],
+      bag: { cinaballs: 10, potions: 5, 'super potions': 0 },
+      money: 500,
+      badges: 0,
+      name: 'Red',
+    };
+
+    let moveTimer = 0;
+    const MOVE_SPEED = 8; // frames per tile
+
+    // ═══════════════════════════════════════════════════════════════
+    // MAP DATA
+    // ═══════════════════════════════════════════════════════════════
+    // Tile types: 0=grass, 1=path, 2=water, 3=tree, 4=wall, 5=flower, 6=sand, 7=bridge, 8=door, 9=sign
+
+    const TILE_COLORS = ['#4a4', '#c95', '#48f', '#264', '#555', '#e8e', '#da6', '#a63', '#642', '#864'];
+    const TILE_WALKABLE = [1, 1, 0, 0, 0, 1, 1, 1, 1, 1]; // grass=path, water/tree/wall not walkable
+    // 0=grass(WALK), 1=path(WALK), 2=water(NOT), 3=tree(NOT), 4=wall(NOT), 5=flower(WALK), 6=sand(WALK), 7=bridge(WALK), 8=door(WALK), 9=sign(NOT)
+    const WALK = [1, 1, 0, 0, 0, 1, 1, 1, 1, 0];
+
+    function generateMap(area) {
+      const m = [];
+      for (let y = 0; y < MAP_H; y++) {
+        m[y] = [];
+        for (let x = 0; x < MAP_W; x++) {
+          if (area === 'town') {
+            // Town layout
+            if (y === 23 && x === 14) { m[y][x] = 1; } // Exit down
+            else if (y === 10 && x === 28) { m[y][x] = 1; } // Exit right
+            else if (y < 2 || y > MAP_H - 3 || x < 2 || x > MAP_W - 3) { m[y][x] = 3; } // trees border
+            else if (y === 10 && x >= 8 && x <= 12) { m[y][x] = 4; } // house wall
+            else if (y === 11 && x >= 8 && x <= 12) { m[y][x] = x === 10 ? 8 : 4; } // door
+            else if (y === 5 && x >= 18 && x <= 23) { m[y][x] = 4; } // pokemon center wall
+            else if (y === 6 && x >= 18 && x <= 23) { m[y][x] = x === 20 ? 8 : 4; } // door
+            else if (y === 20 && x >= 3 && x <= 7) { m[y][x] = 4; } // shop wall
+            else if (y === 21 && x >= 3 && x <= 7) { m[y][x] = x === 5 ? 8 : 4; } // door
+            // Bloom Gym (top-left, grass)
+            else if (y === 5 && x >= 3 && x <= 7) { m[y][x] = 4; }
+            else if (y === 6 && x >= 3 && x <= 7) { m[y][x] = x === 5 ? 8 : 4; }
+            // Blaze Gym (bottom-left, fire)
+            else if (y === 15 && x >= 3 && x <= 7) { m[y][x] = 4; }
+            else if (y === 16 && x >= 3 && x <= 7) { m[y][x] = x === 5 ? 8 : 4; }
+            // Torrent Gym (bottom-right, water)
+            else if (y === 15 && x >= 18 && x <= 23) { m[y][x] = 4; }
+            else if (y === 16 && x >= 18 && x <= 23) { m[y][x] = x === 20 ? 8 : 4; }
+            else { m[y][x] = (Math.random() < 0.03) ? 5 : 1; } // paths and flowers
+          }
+          else if (area === 'route1') {
+            if (y === 0 && x === 14) { m[y][x] = 1; } // Exit up
+            else if (y === 10 && x === 28) { m[y][x] = 1; } // Exit right
+            else if (y === 10 && x === 1) { m[y][x] = 1; } // Exit left
+            else if (y < 1 || y > MAP_H - 2 || x < 1 || x > MAP_W - 2) { m[y][x] = 3; }
+            else if (y === 0 || y === MAP_H - 1 || x === 0 || x === MAP_W - 1) { m[y][x] = 3; }
+            else if (x >= 13 && x <= 15 && y >= 5 && y <= 19) { m[y][x] = 1; } // main path
+            else if (y >= 10 && y <= 12 && x >= 1 && x <= 28) { m[y][x] = 1; } // cross path
+            else if (y >= 1 && y <= 4 && x >= 1 && x <= 6) { m[y][x] = 2; } // pond
+            else { m[y][x] = (Math.random() < 0.12) ? 3 : (Math.random() < 0.08 ? 5 : 0); }
+          }
+          else if (area === 'route2') {
+            if (y === 10 && x === 0) { m[y][x] = 1; } // Exit left
+            else if (y === 0 && x === 14) { m[y][x] = 1; } // Exit up
+            else if (y === 10 && x === 28) { m[y][x] = 1; } // Exit right
+            else if (y < 1 || y > MAP_H - 2 || x < 1 || x > MAP_W - 2) { m[y][x] = 3; }
+            else if (y >= 8 && y <= 12 && x >= 1 && x <= 28) { m[y][x] = 1; }
+            else if (x >= 14 && x <= 16 && y >= 1 && y <= 23) { m[y][x] = 1; }
+            else if (y >= 15 && y <= 20 && x >= 2 && x <= 8) { m[y][x] = 6; } // sand
+            else { m[y][x] = (Math.random() < 0.15) ? 3 : (Math.random() < 0.05 ? 5 : 0); }
+          }
+          else if (area === 'forest') {
+            if (y === 12 && x === 29) { m[y][x] = 1; } // Exit right
+            else if (y === 0 && x === 14) { m[y][x] = 1; } // Exit up
+            else if (y < 1 || y > MAP_H - 2 || x < 1 || x > MAP_W - 2) { m[y][x] = 3; }
+            else if (x >= 13 && x <= 16 && y >= 1 && y <= 23) { m[y][x] = 1; } // path through forest
+            else if (y >= 11 && y <= 13 && x >= 1 && x <= 28) { m[y][x] = 1; }
+            else { m[y][x] = (Math.random() < 0.25) ? 3 : 0; } // dense trees
+          }
+          else if (area === 'mountain') {
+            if (y === 24 && x === 14) { m[y][x] = 1; } // Exit down
+            else if (y === 12 && x === 0) { m[y][x] = 1; } // Exit left
+            else if (y < 1 || y > MAP_H - 2 || x < 1 || x > MAP_W - 2) { m[y][x] = 4; }
+            else if (y >= 10 && y <= 14 && x >= 1 && x <= 28) { m[y][x] = 1; }
+            else if (x >= 13 && x <= 16 && y >= 1 && y <= 23) { m[y][x] = 1; }
+            else { m[y][x] = (Math.random() < 0.2) ? 4 : (Math.random() < 0.1 ? 0 : 6); }
+          }
+        }
+      }
+      return m;
+    }
+
+    let currentMap = null;
+    let currentArea = 'town';
+    let mapObjects = []; // NPCs, signs, etc.
+
+    // NPC data
+    const NPCS = {
+      town: [
+        { x: 14, y: 15, dir: 0, sprite: 'oldman', name: 'Elder', dialogue: ['Welcome to Cinnabar Town!', 'If you go east, you\'ll find Route 1.', 'Be careful of wild Cinamon!'] },
+        { x: 20, y: 8, dir: 0, sprite: 'nurse', name: 'Nurse', dialogue: ['Welcome to the Cinamon Center!', 'Let me heal your team!'], heal: true },
+        { x: 5, y: 21, dir: 0, sprite: 'merchant', name: 'Merchant', dialogue: ['I sell supplies!'], shop: true },
+        { x: 10, y: 8, dir: 0, sprite: 'rival', name: 'Rival', dialogue: ['Hey! I just got my first Cinamon!', 'Let\'s battle sometime!'] },
+        // Gym receptionists
+        { x: 5, y: 7, dir: 1, sprite: 'scientist', name: 'Flora', dialogue: ['Welcome to the Bloom Gym!', 'I am Flora, the Gym Leader!', 'Prove your bond with nature!'], gym: 'bloom' },
+        { x: 5, y: 17, dir: 1, sprite: 'scientist', name: 'Ash', dialogue: ['Welcome to the Blaze Gym!', 'I am Ash, the Gym Leader!', 'Feel the heat of battle!'], gym: 'blaze' },
+        { x: 20, y: 17, dir: 1, sprite: 'scientist', name: 'Marina', dialogue: ['Welcome to the Torrent Gym!', 'I am Marina, the Gym Leader!', 'The tides will sweep you away!'], gym: 'torrent' },
+      ],
+      route1: [
+        { x: 5, y: 10, dir: 3, sprite: 'trainer', name: 'Camper', dialogue: ['I love Route 1!', 'The Cinamon here are friendly.'], trainer: true, team: ['barksworth'], defeated: false },
+        { x: 24, y: 12, dir: 2, sprite: 'trainer', name: 'Hiker', dialogue: ['The mountain path is tough!'], trainer: true, team: ['rockroll'], defeated: false },
+      ],
+    };
+
+    // ═══════════════════════════════════════════════════════════════
+    // GYM DATA
+    // ═══════════════════════════════════════════════════════════════
+
+    const GYMS = {
+      bloom: {
+        name: 'Bloom Gym',
+        type: TYPES.GRASS,
+        leader: 'Flora',
+        leaderTeam: [
+          { species: 'sproutling', level: 10 },
+          { species: 'oakshield', level: 14 },
+        ],
+        trainers: [
+          { name: 'Gardener', team: ['sproutling'], level: 8 },
+          { name: 'Botanist', team: ['cinnabee', 'sproutling'], level: 9 },
+        ],
+        badge: 'Bloom Badge',
+        reward: 500,
+        npcSprite: 'scientist',
+        npcDir: 0,
+      },
+      blaze: {
+        name: 'Blaze Gym',
+        type: TYPES.FIRE,
+        leader: 'Ash',
+        leaderTeam: [
+          { species: 'flamling', level: 10 },
+          { species: 'blazepaw', level: 14 },
+        ],
+        trainers: [
+          { name: 'Blacksmith', team: ['flamling'], level: 8 },
+          { name: 'Firebreather', team: ['flamling', 'cinnabee'], level: 9 },
+        ],
+        badge: 'Blaze Badge',
+        reward: 500,
+        npcSprite: 'scientist',
+        npcDir: 0,
+      },
+      torrent: {
+        name: 'Torrent Gym',
+        type: TYPES.WATER,
+        leader: 'Marina',
+        leaderTeam: [
+          { species: 'splasher', level: 10 },
+          { species: 'tidalon', level: 14 },
+        ],
+        trainers: [
+          { name: 'Fisher', team: ['splasher'], level: 8 },
+          { name: 'Sailor', team: ['splasher', 'barksworth'], level: 9 },
+        ],
+        badge: 'Torrent Badge',
+        reward: 500,
+        npcSprite: 'scientist',
+        npcDir: 0,
+      },
+    };
+
+    let gymState = { gymKey: null, phase: 'trainers', trainerIndex: 0 };
+
+    function loadArea(area) {
+      currentArea = area;
+      currentMap = generateMap(area);
+      mapObjects = NPCS[area] ? JSON.parse(JSON.stringify(NPCS[area])) : [];
+      encounterSteps = 0;
+    }
+
+    // Transitions between areas (area-specific to avoid duplicate key collisions)
+    const TRANSITIONS = {
+      town: {
+        '14_23': { area: 'route1', px: 14, py: 1 },
+        '28_10': { area: 'route2', px: 1, py: 10 },
+      },
+      route1: {
+        '14_0': { area: 'town', px: 14, py: 22 },
+        '28_10': { area: 'route2', px: 1, py: 10 },
+        '1_10': { area: 'forest', px: 28, py: 12 },
+      },
+      route2: {
+        '0_10': { area: 'route1', px: 27, py: 10 },
+        '14_0': { area: 'mountain', px: 14, py: 22 },
+        '28_10': { area: 'town', px: 1, py: 10 },
+      },
+      forest: {
+        '29_12': { area: 'route1', px: 2, py: 10 },
+        '14_0': { area: 'route1', px: 14, py: 22 },
+      },
+      mountain: {
+        '14_24': { area: 'route2', px: 14, py: 1 },
+        '0_12': { area: 'forest', px: 28, py: 12 },
+      },
+    };
+
+    // ═══════════════════════════════════════════════════════════════
+    // DRAWING UTILITIES
+    // ═══════════════════════════════════════════════════════════════
+
+    function drawTile(tx, ty, tileType) {
+      const sx = tx * TILE;
+      const sy = ty * TILE;
+      ctx.fillStyle = TILE_COLORS[tileType] || '#333';
+      ctx.fillRect(sx, sy, TILE, TILE);
+
+      // Details
+      if (tileType === 0) { // grass details
+        ctx.fillStyle = '#3a3';
+        for (let i = 0; i < 3; i++) {
+          const gx = sx + 3 + ((tx * 7 + i * 5) % 10);
+          const gy = sy + 3 + ((ty * 11 + i * 3) % 10);
+          ctx.fillRect(gx, gy, 1, 3);
+        }
+      }
+      if (tileType === 3) { // tree
+        ctx.fillStyle = '#264';
+        ctx.fillRect(sx + 2, sy + 2, 12, 10);
+        ctx.fillStyle = '#843';
+        ctx.fillRect(sx + 6, sy + 10, 4, 6);
+      }
+      if (tileType === 4) { // wall/rock
+        ctx.fillStyle = '#666';
+        ctx.fillRect(sx + 1, sy + 1, 14, 14);
+        ctx.fillStyle = '#777';
+        ctx.fillRect(sx + 2, sy + 2, 12, 12);
+      }
+      if (tileType === 5) { // flower
+        ctx.fillStyle = '#e8e';
+        ctx.fillRect(sx + 5, sy + 4, 3, 3);
+        ctx.fillStyle = '#fe4';
+        ctx.fillRect(sx + 8, sy + 8, 2, 2);
+      }
+      if (tileType === 2) { // water
+        ctx.fillStyle = '#36c';
+        const off = (gameFrame >> 3) % 4;
+        for (let i = 0; i < 3; i++) {
+          ctx.fillRect(sx + 2 + i * 5 + ((off + i) % 3), sy + 6, 3, 1);
+        }
+      }
+      if (tileType === 6) { // sand
+        ctx.fillStyle = '#cb8';
+        for (let i = 0; i < 4; i++) {
+          ctx.fillRect(sx + ((tx * 3 + i * 4) % 12), sy + ((ty * 5 + i * 2) % 12), 2, 2);
+        }
+      }
+      if (tileType === 7) { // bridge
+        ctx.fillStyle = '#863';
+        ctx.fillRect(sx, sy, TILE, TILE);
+        ctx.fillStyle = '#a74';
+        ctx.fillRect(sx + 2, sy, 2, TILE);
+        ctx.fillRect(sx + 12, sy, 2, TILE);
+      }
+      if (tileType === 8) { // door
+        ctx.fillStyle = '#642';
+        ctx.fillRect(sx + 2, sy + 2, 12, 14);
+        ctx.fillStyle = '#da0';
+        ctx.fillRect(sx + 10, sy + 8, 2, 2);
+      }
+      if (tileType === 9) { // sign
+        ctx.fillStyle = '#863';
+        ctx.fillRect(sx + 5, sy + 8, 2, 7);
+        ctx.fillRect(sx + 2, sy + 3, 8, 6);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(sx + 3, sy + 4, 6, 4);
+      }
+    }
+
+    // Draw a simple creature sprite
+    function drawCreature(cx, cy, speciesKey, size, flipped) {
+      let sp = SPECIES[speciesKey];
+      if (!sp) sp = SPECIES['barksworth'];
+      const s = size;
+      const dir = flipped ? -1 : 1;
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      if (flipped) ctx.scale(-1, 1);
+
+      // Body
+      ctx.fillStyle = sp.color;
+      ctx.fillRect(-s / 2, -s / 3, s, s * 0.7);
+
+      // Head
+      ctx.fillRect(-s / 3, -s * 0.65, s * 0.65, s * 0.45);
+
+      // Eyes
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(-s / 6, -s * 0.5, s * 0.2, s * 0.2);
+      ctx.fillRect(s / 10, -s * 0.5, s * 0.2, s * 0.2);
+      ctx.fillStyle = '#111';
+      ctx.fillRect(-s / 8, -s * 0.45, s * 0.1, s * 0.12);
+      ctx.fillRect(s / 8, -s * 0.45, s * 0.1, s * 0.12);
+
+      // Type-specific features
+      if (sp.type === TYPES.FIRE) {
+        ctx.fillStyle = '#fa0';
+        ctx.fillRect(-s / 6, -s * 0.8, s * 0.15, s * 0.2);
+        ctx.fillRect(s / 12, -s * 0.75, s * 0.1, s * 0.15);
+      }
+      if (sp.type === TYPES.GRASS) {
+        ctx.fillStyle = '#2a2';
+        ctx.fillRect(-s / 5, -s * 0.8, s * 0.12, s * 0.2);
+        ctx.fillRect(s / 20, -s * 0.85, s * 0.1, s * 0.25);
+        ctx.fillRect(s / 8, -s * 0.75, s * 0.1, s * 0.15);
+      }
+      if (sp.type === TYPES.WATER) {
+        ctx.fillStyle = '#4af';
+        ctx.fillRect(-s / 4, -s * 0.7, s * 0.5, s * 0.08);
+      }
+      if (sp.type === TYPES.ELECTRIC) {
+        ctx.fillStyle = '#ff0';
+        ctx.fillRect(-s / 3, -s * 0.8, s * 0.1, s * 0.15);
+        ctx.fillRect(s / 4, -s * 0.8, s * 0.1, s * 0.15);
+      }
+      if (sp.type === TYPES.ICE) {
+        ctx.fillStyle = '#aef';
+        ctx.fillRect(-s / 4, -s * 0.75, s * 0.1, s * 0.1);
+        ctx.fillRect(s / 4, -s * 0.75, s * 0.1, s * 0.1);
+        ctx.fillRect(0, -s * 0.85, s * 0.1, s * 0.1);
+      }
+      if (sp.type === TYPES.ROCK) {
+        ctx.fillStyle = '#864';
+        ctx.fillRect(-s / 2, -s * 0.15, s, s * 0.15);
+      }
+      if (sp.type === TYPES.DARK) {
+        ctx.fillStyle = '#424';
+        ctx.fillRect(-s / 3, -s * 0.6, s * 0.65, s * 0.1);
+      }
+      if (sp.type === TYPES.FLYING) {
+        ctx.fillStyle = '#adf';
+        ctx.fillRect(-s / 2, -s * 0.2, s * 0.25, s * 0.15);
+        ctx.fillRect(s / 2 - s * 0.25, -s * 0.2, s * 0.25, s * 0.15);
+      }
+      if (sp.type === TYPES.BUG) {
+        ctx.fillStyle = '#ea3';
+        ctx.fillRect(-s / 2, -s * 0.1, s * 0.2, s * 0.3);
+        ctx.fillRect(s / 2 - s * 0.2, -s * 0.1, s * 0.2, s * 0.3);
+      }
+
+      // Legs
+      ctx.fillStyle = sp.color;
+      ctx.fillRect(-s / 3, s * 0.35, s * 0.2, s * 0.15);
+      ctx.fillRect(s / 8, s * 0.35, s * 0.2, s * 0.15);
+
+      ctx.restore();
+    }
+
+    // Draw player character
+    function drawPlayer(px, py) {
+      const s = TILE - 2;
+      ctx.fillStyle = '#d33'; // hat
+      ctx.fillRect(px + 1, py - 1, s - 2, 5);
+      ctx.fillStyle = '#fc8'; // skin
+      ctx.fillRect(px + 3, py + 4, s - 6, 4);
+      ctx.fillStyle = '#33a'; // body
+      ctx.fillRect(px + 2, py + 8, s - 4, 5);
+      ctx.fillStyle = '#333'; // legs
+      ctx.fillRect(px + 3, py + 13, 4, 3);
+      ctx.fillRect(px + 9, py + 13, 4, 3);
+
+      // Eyes based on direction
+      ctx.fillStyle = '#111';
+      if (player.dir === 0) { // down
+        ctx.fillRect(px + 4, py + 5, 2, 2);
+        ctx.fillRect(px + 10, py + 5, 2, 2);
+      } else if (player.dir === 1) { // up
+        // back of head, no eyes
+      } else if (player.dir === 2) { // left
+        ctx.fillRect(px + 3, py + 5, 2, 2);
+      } else { // right
+        ctx.fillRect(px + 11, py + 5, 2, 2);
+      }
+    }
+
+    // Draw NPC
+    function drawNPC(npc, px, py) {
+      const colors = { oldman: '#888', nurse: '#faa', merchant: '#af8', trainer: '#8a8', rival: '#a8f', scientist: '#aff' };
+      const c = colors[npc.sprite] || '#aaa';
+      ctx.fillStyle = c;
+      ctx.fillRect(px + 2, py + 2, TILE - 4, TILE - 2);
+      ctx.fillStyle = '#111';
+      ctx.fillRect(px + 4, py + 5, 2, 2);
+      ctx.fillRect(px + 10, py + 5, 2, 2);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // OVERWORLD
+    // ═══════════════════════════════════════════════════════════════
+
+    let gameFrame = 0;
+    let transitionTimer = 0;
+    let encounterSteps = 0;
+    let stepCount = 0;
+
+    function isWalkable(tx, ty) {
+      if (tx < 0 || tx >= MAP_W || ty < 0 || ty >= MAP_H) return false;
+
+      // Allow moving onto transition tiles even if they are solid (like border trees)
+      const key = tx + '_' + ty;
+      const areaTrans = TRANSITIONS[currentArea];
+      if (areaTrans && areaTrans[key]) return true;
+
+      const tile = currentMap[ty][tx];
+      if (!WALK[tile]) return false;
+      // Check NPCs
+      for (const npc of mapObjects) {
+        if (npc.x === tx && npc.y === ty) return false;
+      }
+      return true;
+    }
+
+    function checkTransition(tx, ty) {
+      const key = tx + '_' + ty;
+      const areaTrans = TRANSITIONS[currentArea];
+      if (areaTrans && areaTrans[key]) {
+        const t = areaTrans[key];
+        transitionTimer = 30;
+        loadArea(t.area);
+        player.x = t.px;
+        player.y = t.py;
+        encounterSteps = 0;
+        return true;
+      }
+      return false;
+    }
+
+    function checkEncounter() {
+      if (currentArea === 'town') return false;
+      encounterSteps++;
+      const threshold = currentArea === 'forest' ? 12 : (currentArea === 'mountain' ? 16 : 20);
+      if (encounterSteps >= threshold && Math.random() < 0.3) {
+        encounterSteps = 0;
+        return true;
+      }
+      return false;
+    }
+
+    function interactNPC() {
+      const dx = [0, 0, -1, 1];
+      const dy = [1, -1, 0, 0];
+      const fx = player.x + dx[player.dir];
+      const fy = player.y + dy[player.dir];
+      for (const npc of mapObjects) {
+        if (npc.x === fx && npc.y === fy) {
+          if (npc.heal) {
+            player.team.forEach(c => c.hp = c.maxHP);
+            playSFX('heal');
+            showMessage(['Your Cinamon have been healed!']);
+          } else if (npc.shop) {
+            // Simple shop
+            if (player.money >= 100) {
+              player.money -= 100;
+              player.bag.cinaballs += 5;
+              player.bag.potions += 3;
+              showMessage(['Bought 5 Cinaballs and 3 Potions!']);
+            } else {
+              showMessage(['Not enough money!']);
+            }
+          } else if (npc.trainer && !npc.defeated) {
+            // Trainer battle
+            if (npc.team && npc.team.length > 0) {
+              startBattle(npc.team[0], 5 + player.badges * 3, npc.name);
+              npc.defeated = true;
+            }
+          } else if (npc.gym) {
+            // Gym entry
+            const gym = GYMS[npc.gym];
+            if (player.badges > 0 && player.badges >= Object.keys(GYMS).indexOf(npc.gym) + 1) {
+              showMessage(['You already have the ' + gym.badge + '!']);
+            } else if (gymState.gymKey) {
+              showMessage(['You\'re already in a gym challenge!']);
+            } else {
+              // Start gym challenge
+              gymState = { gymKey: npc.gym, phase: 'trainers', trainerIndex: 0 };
+              const trainer = gym.trainers[0];
+              showMessage([
+                gym.name + ' - ' + TYPE_NAMES[gym.type] + ' Type',
+                'I am ' + gym.leader + ', the Gym Leader!',
+                'First, face my trainers!',
+                trainer.name + ' wants to battle!'
+              ]);
+              // Queue the first trainer battle after dialogue
+              battle.pendingGymBattle = { species: trainer.team[0], level: trainer.level, name: trainer.name, isGymTrainer: true };
+            }
+          } else {
+            showMessage(npc.dialogue);
+          }
+          return;
+        }
+      }
+      // Check signs
+      if (currentMap[fy] && currentMap[fy][fx] === 9) {
+        const areaSigns = {
+          town: 'Cinnabar Town - Home of Trainers',
+          route1: 'Route 1 - Wild Cinamon Territory',
+          route2: 'Route 2 - Sandy Path',
+          forest: 'Mystic Forest - Dense and Mysterious',
+          mountain: 'Rocky Mountain - Hard Terrain',
+        };
+        showMessage([areaSigns[currentArea] || 'A weathered sign.']);
+      }
+    }
+
+    let dialogueQueue = [];
+    let dialogueIndex = 0;
+    function showMessage(lines) {
+      dialogueQueue = lines;
+      dialogueIndex = 0;
+      prevState = gameState;
+      gameState = STATE.DIALOGUE;
+    }
+
+    function updateOverworld() {
+      if (transitionTimer > 0) { transitionTimer--; return; }
+      if (moveTimer > 0) { moveTimer--; return; }
+
+      let dx = 0, dy = 0;
+      let moved = false;
+
+      if (isPressed('up')) { dy = -1; player.dir = 1; moved = true; }
+      else if (isPressed('down')) { dy = 1; player.dir = 0; moved = true; }
+      else if (isPressed('left')) { dx = -1; player.dir = 2; moved = true; }
+      else if (isPressed('right')) { dx = 1; player.dir = 3; moved = true; }
+
+      if (moved) {
+        const nx = player.x + dx;
+        const ny = player.y + dy;
+        if (isWalkable(nx, ny)) {
+          player.x = nx;
+          player.y = ny;
+          moveTimer = MOVE_SPEED;
+          stepCount++;
+
+          // Check tile transitions
+          if (checkTransition(nx, ny)) return;
+
+          // Random encounter
+          if (checkEncounter()) {
+            const table = WILD_TABLE[currentArea] || WILD_TABLE.route1;
+            const species = table[Math.floor(Math.random() * table.length)];
+            const level = 2 + Math.floor(Math.random() * 4) + (currentArea === 'mountain' ? 3 : 0);
+            playSFX('encounter');
+            startBattle(species, level);
+          }
+        }
+      }
+
+      // Action button
+      if (justDown('a')) {
+        interactNPC();
+      }
+
+      // Open menu
+      if (justDown('start') || justDown('b')) {
+        prevState = STATE.OVERWORLD;
+        gameState = STATE.MENU;
+      }
+    }
+
+    function drawOverworld() {
+      // Camera offset
+      let camX = player.x - Math.floor(VIEW_W / 2);
+      let camY = player.y - Math.floor(VIEW_H / 2);
+      camX = Math.max(0, Math.min(MAP_W - VIEW_W, camX));
+      camY = Math.max(0, Math.min(MAP_H - VIEW_H, camY));
+
+      // Draw tiles
+      for (let ty = 0; ty < VIEW_H; ty++) {
+        for (let tx = 0; tx < VIEW_W; tx++) {
+          const mx = camX + tx;
+          const my = camY + ty;
+          if (currentMap[my] && currentMap[my][mx] !== undefined) {
+            drawTile(tx, ty, currentMap[my][mx]);
+          }
+        }
+      }
+
+      // Draw NPCs
+      for (const npc of mapObjects) {
+        const sx = (npc.x - camX) * TILE;
+        const sy = (npc.y - camY) * TILE;
+        if (sx > -TILE && sx < VIEW_W * TILE && sy > -TILE && sy < VIEW_H * TILE) {
+          drawNPC(npc, sx, sy);
+        }
+      }
+
+      // Draw player
+      const px = (player.x - camX) * TILE;
+      const py = (player.y - camY) * TILE;
+      drawPlayer(px, py);
+
+      // Transition effect
+      if (transitionTimer > 0) {
+        ctx.fillStyle = '#000';
+        const alpha = transitionTimer / 30;
+        ctx.globalAlpha = alpha;
+        ctx.fillRect(0, 0, NATIVE_W, VIEW_H * TILE);
+        ctx.globalAlpha = 1;
+      }
+
+      // HUD
+      drawHUD();
+    }
+
+    function drawHUD() {
+      const hudY = VIEW_H * TILE;
+      ctx.fillStyle = '#223';
+      ctx.fillRect(0, hudY, NATIVE_W, NATIVE_H - hudY);
+
+      // Area name
+      ctx.fillStyle = '#fff';
+      ctx.font = '8px monospace';
+      const areaNames = { town: 'Cinnabar Town', route1: 'Route 1', route2: 'Route 2', forest: 'Mystic Forest', mountain: 'Rocky Mountain' };
+      ctx.fillText(areaNames[currentArea] || currentArea, 4, hudY + 10);
+
+      // Team HP summary
+      if (player.team.length > 0) {
+        const lead = player.team[0];
+        ctx.fillStyle = '#fff';
+        ctx.fillText(lead.name + ' Lv' + lead.level, 4, hudY + 22);
+        // HP bar
+        const hpPct = lead.hp / lead.maxHP;
+        ctx.fillStyle = '#333';
+        ctx.fillRect(4, hudY + 26, 60, 5);
+        ctx.fillStyle = hpPct > 0.5 ? '#4a4' : hpPct > 0.25 ? '#da0' : '#e44';
+        ctx.fillRect(4, hudY + 26, 60 * hpPct, 5);
+        ctx.fillStyle = '#fff';
+        ctx.fillText(lead.hp + '/' + lead.maxHP, 66, hudY + 31);
+      }
+
+      // Money and Cinaballs
+      ctx.fillStyle = '#fe0';
+      ctx.fillText('$' + player.money, NATIVE_W - 50, hudY + 10);
+      ctx.fillStyle = '#fff';
+      ctx.fillText('x' + player.bag.cinaballs, NATIVE_W - 50, hudY + 22);
+      // Small ball icon
+      ctx.fillStyle = '#e44';
+      ctx.fillRect(NATIVE_W - 62, hudY + 16, 6, 6);
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(NATIVE_W - 60, hudY + 18, 2, 2);
+
+      // Badge count
+      ctx.fillStyle = '#fe0';
+      ctx.fillText('★' + player.badges, NATIVE_W - 50, hudY + 34);
+
+      // Controls hint
+      ctx.fillStyle = '#666';
+      ctx.fillText('WASD/Arrows:Move  Z:Action  X:Menu', 4, hudY + 38);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // DIALOGUE SYSTEM
+    // ═══════════════════════════════════════════════════════════════
+
+    function updateDialogue() {
+      if (justDown('a') || justDown('b')) {
+        dialogueIndex++;
+        if (dialogueIndex >= dialogueQueue.length) {
+          gameState = prevState;
+        }
+      }
+    }
+
+    function drawDialogue() {
+      // Draw overworld underneath
+      drawOverworld();
+
+      // Dialogue box
+      const boxY = (VIEW_H - 4) * TILE;
+      const boxH = 4 * TILE;
+      ctx.fillStyle = '#111';
+      ctx.fillRect(0, boxY, NATIVE_W, boxH);
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(1, boxY + 1, NATIVE_W - 2, boxH - 2);
+
+      ctx.fillStyle = '#fff';
+      ctx.font = '8px monospace';
+      if (dialogueQueue[dialogueIndex]) {
+        const text = dialogueQueue[dialogueIndex];
+        // Word wrap
+        const maxW = NATIVE_W - 16;
+        let line = '';
+        let ly = boxY + 14;
+        for (const ch of text) {
+          if (ctx.measureText(line + ch).width > maxW) {
+            ctx.fillText(line, 8, ly);
+            ly += 12;
+            line = ch;
+          } else {
+            line += ch;
+          }
+        }
+        ctx.fillText(line, 8, ly);
+      }
+
+      // Continue indicator
+      if ((gameFrame >> 3) % 2 === 0) {
+        ctx.fillStyle = '#fff';
+        ctx.fillText('▼', NATIVE_W - 14, boxY + boxH - 6);
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // MENU SYSTEM
+    // ═══════════════════════════════════════════════════════════════
+
+    let menuCursor = 0;
+    const MENU_ITEMS = ['Team', 'Bag', 'Save', 'Close'];
+
+    function updateMenu() {
+      if (justDown('up')) { menuCursor = (menuCursor - 1 + MENU_ITEMS.length) % MENU_ITEMS.length; playSFX('select'); }
+      if (justDown('down')) { menuCursor = (menuCursor + 1) % MENU_ITEMS.length; playSFX('select'); }
+      if (justDown('a')) {
+        playSFX('confirm');
+        switch (menuCursor) {
+          case 0: gameState = STATE.TEAM_MENU; menuCursor = 0; break;
+          case 1: gameState = STATE.BAG_MENU; menuCursor = 0; break;
+          case 2: saveGame(); showMessage(['Game saved!']); break;
+          case 3: gameState = STATE.OVERWORLD; break;
+        }
+      }
+      if (justDown('b')) {
+        gameState = STATE.OVERWORLD;
+      }
+    }
+
+    function drawMenu() {
+      drawOverworld();
+
+      const bx = 8, by = 20, bw = 100, bh = MENU_ITEMS.length * 12 + 8;
+      ctx.fillStyle = '#112';
+      ctx.fillRect(bx, by, bw, bh);
+      ctx.strokeStyle = '#fff';
+      ctx.strokeRect(bx + 1, by + 1, bw - 2, bh - 2);
+
+      ctx.font = '8px monospace';
+      for (let i = 0; i < MENU_ITEMS.length; i++) {
+        ctx.fillStyle = i === menuCursor ? '#fe0' : '#fff';
+        const prefix = i === menuCursor ? '▶ ' : '  ';
+        ctx.fillText(prefix + MENU_ITEMS[i], bx + 8, by + 14 + i * 12);
+      }
+    }
+
+    // ── Team Menu ──
+    function updateTeamMenu() {
+      if (justDown('up')) menuCursor = (menuCursor - 1 + player.team.length) % Math.max(1, player.team.length);
+      if (justDown('down')) menuCursor = (menuCursor + 1) % Math.max(1, player.team.length);
+      if (justDown('b') || justDown('start')) {
+        gameState = STATE.MENU;
+        menuCursor = 0;
+      }
+    }
+
+    function drawTeamMenu() {
+      drawOverworld();
+      const bx = 4, by = 4, bw = NATIVE_W - 8, bh = NATIVE_H - 8;
+      ctx.fillStyle = '#112';
+      ctx.fillRect(bx, by, bw, bh);
+      ctx.strokeStyle = '#fff';
+      ctx.strokeRect(bx + 1, by + 1, bw - 2, bh - 2);
+
+      ctx.font = '8px monospace';
+      ctx.fillStyle = '#fe0';
+      ctx.fillText('TEAM', bx + 8, by + 12);
+
+      for (let i = 0; i < player.team.length; i++) {
+        const c = player.team[i];
+        const cy = by + 22 + i * 20;
+        const selected = i === menuCursor;
+
+        ctx.fillStyle = selected ? '#336' : '#223';
+        ctx.fillRect(bx + 4, cy, bw - 8, 18);
+
+        // Mini sprite
+        drawCreature(bx + 14, cy + 10, c.species, 12, false);
+
+        ctx.fillStyle = selected ? '#fe0' : '#fff';
+        ctx.fillText(c.name + ' Lv' + c.level, bx + 26, cy + 8);
+        ctx.fillStyle = TYPE_COLORS[c.type];
+        ctx.fillText(TYPE_NAMES[c.type], bx + 26, cy + 16);
+
+        // HP bar
+        const hpPct = c.hp / c.maxHP;
+        ctx.fillStyle = '#333';
+        ctx.fillRect(bx + 60, cy + 11, 40, 4);
+        ctx.fillStyle = hpPct > 0.5 ? '#4a4' : hpPct > 0.25 ? '#da0' : '#e44';
+        ctx.fillRect(bx + 60, cy + 11, 40 * hpPct, 4);
+        ctx.fillStyle = '#aaa';
+        ctx.fillText(c.hp + '/' + c.maxHP, bx + 102, cy + 16);
+      }
+
+      if (player.team.length === 0) {
+        ctx.fillStyle = '#888';
+        ctx.fillText('No Cinamon caught yet!', bx + 10, by + 30);
+      }
+    }
+
+    // ── Bag Menu ──
+    function updateBagMenu() {
+      const items = Object.keys(player.bag);
+      if (justDown('up')) menuCursor = (menuCursor - 1 + items.length) % items.length;
+      if (justDown('down')) menuCursor = (menuCursor + 1) % items.length;
+      if (justDown('a')) {
+        const item = items[menuCursor];
+        // In battle, target the active battler
+        const target = gameState === STATE.BATTLE ? battle.playerMon : null;
+        const inBattle = gameState === STATE.BATTLE;
+
+        if (item === 'potions' && player.bag.potions > 0) {
+          if (inBattle) {
+            if (!target || target.hp <= 0) { showMessage(['Can\'t use on a fainted creature!']); return; }
+            player.bag.potions--;
+            target.hp = Math.min(target.maxHP, target.hp + 20);
+            showMessage(['Used Potion on ' + target.name + '!']);
+          } else if (player.team.length > 0) {
+            // Heal most injured non-fainted creature
+            let best = null, bestPct = 1;
+            for (const c of player.team) {
+              if (c.hp > 0 && c.hp < c.maxHP) {
+                const pct = c.hp / c.maxHP;
+                if (!best || pct < bestPct) { best = c; bestPct = pct; }
+              }
+            }
+            if (!best) { showMessage(['No Cinamon need healing!']); return; }
+            player.bag.potions--;
+            best.hp = Math.min(best.maxHP, best.hp + 20);
+            showMessage(['Used Potion on ' + best.name + '!']);
+          } else {
+            showMessage(['No Cinamon to heal!']);
+          }
+        } else if (item === 'super potions' && player.bag['super potions'] > 0) {
+          if (inBattle) {
+            if (!target || target.hp <= 0) { showMessage(['Can\'t use on a fainted creature!']); return; }
+            player.bag['super potions']--;
+            target.hp = Math.min(target.maxHP, target.hp + 50);
+            showMessage(['Used Super Potion on ' + target.name + '!']);
+          } else if (player.team.length > 0) {
+            // Heal most injured non-fainted creature
+            let best = null, bestPct = 1;
+            for (const c of player.team) {
+              if (c.hp > 0 && c.hp < c.maxHP) {
+                const pct = c.hp / c.maxHP;
+                if (!best || pct < bestPct) { best = c; bestPct = pct; }
+              }
+            }
+            if (!best) { showMessage(['No Cinamon need healing!']); return; }
+            player.bag['super potions']--;
+            best.hp = Math.min(best.maxHP, best.hp + 50);
+            showMessage(['Used Super Potion on ' + best.name + '!']);
+          } else {
+            showMessage(['No Cinamon to heal!']);
+          }
+        } else {
+          showMessage(['Can\'t use that here.']);
+        }
+      }
+      if (justDown('b') || justDown('start')) {
+        gameState = STATE.MENU;
+        menuCursor = 0;
+      }
+    }
+
+    function drawBagMenu() {
+      drawOverworld();
+      const bx = 4, by = 4, bw = NATIVE_W - 8, bh = NATIVE_H - 8;
+      ctx.fillStyle = '#112';
+      ctx.fillRect(bx, by, bw, bh);
+      ctx.strokeStyle = '#fff';
+      ctx.strokeRect(bx + 1, by + 1, bw - 2, bh - 2);
+
+      ctx.font = '8px monospace';
+      ctx.fillStyle = '#fe0';
+      ctx.fillText('BAG', bx + 8, by + 12);
+
+      const items = Object.keys(player.bag);
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const iy = by + 24 + i * 14;
+        ctx.fillStyle = i === menuCursor ? '#fe0' : '#fff';
+        const prefix = i === menuCursor ? '▶ ' : '  ';
+        ctx.fillText(prefix + item + ': ' + player.bag[item], bx + 8, iy);
+      }
+
+      ctx.fillStyle = '#666';
+      ctx.fillText('Z:Use  X:Back', bx + 8, by + bh - 8);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // BATTLE SYSTEM
+    // ═══════════════════════════════════════════════════════════════
+
+    let battle = {
+      enemy: null,
+      playerMon: null,
+      phase: 'intro', // intro, select, fight, enemy_turn, animating, caught, victory, defeat, run
+      menuCursor: 0,
+      fightCursor: 0,
+      text: '',
+      textQueue: [],
+      animTimer: 0,
+      isTrainer: false,
+      trainerName: '',
+      turnOrder: [],
+      playerFainted: false,
+      enemyFainted: false,
+      canRun: true,
+      pendingGymBattle: null, // queued gym battle to start after dialogue
+      returnToOverworld: false, // exit battle after showing text
+    };
+
+    function startBattle(species, level, trainerName) {
+      battle.enemy = createCreature(species, level);
+      battle.playerMon = player.team[0];
+      if (!battle.playerMon || battle.playerMon.hp <= 0) {
+        // Find first alive
+        for (const c of player.team) {
+          if (c.hp > 0) { battle.playerMon = c; break; }
+        }
+      }
+      battle.phase = 'intro';
+      battle.menuCursor = 0;
+      battle.fightCursor = 0;
+      battle.text = '';
+      battle.textQueue = [];
+      battle.animTimer = 60;
+      battle.isTrainer = !!trainerName;
+      battle.trainerName = trainerName || '';
+      battle.canRun = !trainerName;
+      battle.playerFainted = false;
+      battle.enemyFainted = false;
+      battle.nextPhase = null;
+
+      // Reset temporary stat modifiers by recalculating stats based on level + base stats
+      player.team.forEach(c => recalcCreatureStats(c));
+      recalcCreatureStats(battle.enemy);
+
+      prevState = gameState;
+      gameState = STATE.BATTLE;
+    }
+
+    function calcDamage(attacker, defender, move) {
+      const m = MOVES[move];
+      if (!m || m.power === 0) return 0;
+      const level = attacker.level;
+      const atk = attacker.atk;
+      const def = defender.def;
+      let damage = Math.floor(((2 * level / 5 + 2) * m.power * atk / def) / 50) + 2;
+      // Type effectiveness
+      const eff = typeEff(m.type, defender.type);
+      damage = Math.floor(damage * eff);
+      // Accuracy
+      if (Math.random() * 100 > m.acc) return -1; // miss
+      // Crit chance
+      if (Math.random() < 0.0625) damage = Math.floor(damage * 1.5);
+      // Random factor
+      damage = Math.floor(damage * (Math.random() * 0.15 + 0.85));
+      if (damage < 1) damage = 1;
+      return damage;
+    }
+
+    function updateBattle() {
+      switch (battle.phase) {
+        case 'intro':
+          if (battle.animTimer > 0) { battle.animTimer--; return; }
+          const introText = battle.isTrainer
+            ? [battle.trainerName + ' wants to battle!', 'Go, ' + battle.enemy.name + '!']
+            : ['A wild ' + battle.enemy.name + ' appeared!'];
+          battle.textQueue = introText;
+          battle.text = battle.textQueue.shift();
+          battle.phase = 'show_text';
+          battle.animTimer = 0;
+          break;
+
+        case 'show_text':
+          if (justDown('a') || battle.animTimer > 0) {
+            if (battle.animTimer > 0) { battle.animTimer--; return; }
+            if (battle.textQueue.length > 0) {
+              battle.text = battle.textQueue.shift();
+              battle.animTimer = 0;
+            } else if (battle.pendingGymBattle) {
+              // Start pending gym battle
+              const gb = battle.pendingGymBattle;
+              battle.pendingGymBattle = null;
+              startBattle(gb.species, gb.level, gb.name);
+            } else if (battle.returnToOverworld) {
+              battle.returnToOverworld = false;
+              gameState = STATE.OVERWORLD;
+            } else if (battle.nextPhase) {
+              battle.phase = battle.nextPhase;
+              battle.nextPhase = null;
+              if (battle.phase === 'enemy_turn') {
+                battle.animTimer = 0;
+              }
+            } else {
+              battle.phase = 'select';
+              battle.menuCursor = 0;
+            }
+          }
+          break;
+
+        case 'select': {
+          const battleOpts = battle.canRun ? ['fight', 'bag', 'run', 'switch'] : ['fight', 'bag', 'switch'];
+          const optCount = battleOpts.length;
+          if (justDown('up')) battle.menuCursor = (battle.menuCursor - 1 + optCount) % optCount;
+          if (justDown('down')) battle.menuCursor = (battle.menuCursor + 1) % optCount;
+          if (justDown('a')) {
+            const action = battleOpts[battle.menuCursor];
+            if (action === 'fight') {
+              battle.phase = 'fight';
+              battle.fightCursor = 0;
+            } else if (action === 'bag') {
+              if (player.bag.cinaballs > 0) {
+                player.bag.cinaballs--;
+                const catchRate = Math.max(10, 100 - battle.enemy.level * 3 + (battle.enemy.hp / battle.enemy.maxHP) * 30);
+                battle.textQueue = ['You threw a Cinaball!'];
+                if (Math.random() * 100 < catchRate) {
+                  battle.textQueue.push('Gotcha! ' + battle.enemy.name + ' was caught!');
+                  battle.nextPhase = 'catch_anim';
+                  battle.animTimer = 40;
+                } else {
+                  battle.textQueue.push('Oh no! It broke free!');
+                  battle.nextPhase = 'enemy_turn';
+                }
+                battle.text = battle.textQueue.shift();
+                battle.phase = 'show_text';
+              } else {
+                battle.textQueue = ['No Cinaballs left!'];
+                battle.text = battle.textQueue.shift();
+                battle.phase = 'show_text';
+              }
+            } else if (action === 'run') {
+              if (Math.random() < 0.7) {
+                battle.textQueue = ['Got away safely!'];
+                battle.text = battle.textQueue.shift();
+                battle.phase = 'run';
+              } else {
+                battle.textQueue = ['Couldn\'t get away!'];
+                battle.phase = 'enemy_turn';
+                battle.text = battle.textQueue.shift();
+                battle.animTimer = 0;
+              }
+            } else if (action === 'switch') {
+              if (player.team.length > 1) {
+                for (let i = 0; i < player.team.length; i++) {
+                  if (player.team[i].hp > 0 && player.team[i] !== battle.playerMon) {
+                    battle.playerMon = player.team[i];
+                    battle.textQueue = ['Go, ' + battle.playerMon.name + '!'];
+                    battle.phase = 'enemy_turn';
+                    battle.text = battle.textQueue.shift();
+                    battle.animTimer = 0;
+                    break;
+                  }
+                }
+              } else {
+                battle.textQueue = ['No other Cinamon!'];
+                battle.text = battle.textQueue.shift();
+                battle.phase = 'show_text';
+              }
+            }
+          }
+          if (justDown('b')) {
+            // Nothing on B in battle menu
+          }
+          break;
+        }
+
+        case 'fight':
+          if (justDown('up')) battle.fightCursor = (battle.fightCursor - 1 + 4) % 4;
+          if (justDown('down')) battle.fightCursor = (battle.fightCursor + 1) % 4;
+          if (justDown('a')) {
+            const moveName = battle.playerMon.moves[battle.fightCursor];
+            if (!moveName) { battle.fightCursor = 0; return; }
+            const m = MOVES[moveName];
+            if (!m) return;
+
+            // Determine turn order
+            const playerFirst = battle.playerMon.spd >= battle.enemy.spd;
+            const first = playerFirst ? 'player' : 'enemy';
+            const second = playerFirst ? 'enemy' : 'player';
+
+            battle.turnOrder = [];
+            if (first === 'player') {
+              battle.turnOrder.push({ who: 'player', move: moveName });
+              battle.turnOrder.push({ who: 'enemy', move: battle.enemy.moves[Math.floor(Math.random() * battle.enemy.moves.length)] });
+            } else {
+              battle.turnOrder.push({ who: 'enemy', move: battle.enemy.moves[Math.floor(Math.random() * battle.enemy.moves.length)] });
+              battle.turnOrder.push({ who: 'player', move: moveName });
+            }
+            battle.phase = 'execute_turn';
+            battle.turnIndex = 0;
+            executeBattleTurn();
+          }
+          if (justDown('b')) {
+            battle.phase = 'select';
+          }
+          break;
+
+        case 'execute_turn':
+          if (justDown('a')) {
+            executeBattleTurn();
+          }
+          break;
+
+        case 'enemy_turn':
+          if (justDown('a') || battle.animTimer > 0) {
+            if (battle.animTimer > 0) { battle.animTimer--; return; }
+            const eMove = battle.enemy.moves[Math.floor(Math.random() * battle.enemy.moves.length)];
+            const damage = calcDamage(battle.enemy, battle.playerMon, eMove);
+            const m = MOVES[eMove];
+            if (damage === -1) {
+              battle.textQueue = [battle.enemy.name + ' used ' + eMove + ' but missed!'];
+            } else {
+              battle.playerMon.hp -= damage;
+              if (battle.playerMon.hp < 0) battle.playerMon.hp = 0;
+              const eff = typeEff(m.type, battle.playerMon.type);
+              let msg = battle.enemy.name + ' used ' + eMove + '!';
+              if (eff > 1) msg += ' Super effective!';
+              if (eff < 1) msg += ' Not very effective...';
+              battle.textQueue = [msg, battle.playerMon.name + ' HP: ' + battle.playerMon.hp + '/' + battle.playerMon.maxHP];
+              if (battle.playerMon.hp <= 0) {
+                battle.textQueue.push(battle.playerMon.name + ' fainted!');
+                battle.playerFainted = true;
+                battle.nextPhase = 'execute_turn';
+              }
+            }
+            battle.text = battle.textQueue.shift();
+            battle.phase = 'show_text';
+            battle.animTimer = 0;
+
+            // Check if both fainted after this
+            if (battle.enemyFainted && battle.playerFainted) {
+              // shouldn't happen but handle
+            }
+          }
+          break;
+
+        case 'catch_anim':
+          if (battle.animTimer > 0) { battle.animTimer--; return; }
+          // Add to team
+          const caught = JSON.parse(JSON.stringify(battle.enemy));
+          caught.caught = true;
+          playSFX('catch');
+          if (player.team.length < 6) {
+            player.team.push(caught);
+            battle.textQueue = [caught.name + ' was added to your team!'];
+          } else {
+            battle.textQueue = ['Team full! ' + caught.name + ' was released.'];
+          }
+          battle.text = battle.textQueue.shift();
+          battle.phase = 'show_text';
+          battle.nextPhase = 'victory';
+          battle.animTimer = 0;
+          break;
+
+        case 'victory':
+          if (battle.textQueue.length > 0) {
+            if (justDown('a')) {
+              battle.text = battle.textQueue.shift();
+            }
+          } else if (gymState.gymKey) {
+            // Gym battle chain
+            const gym = GYMS[gymState.gymKey];
+            if (gymState.phase === 'trainers') {
+              gymState.trainerIndex++;
+              if (gymState.trainerIndex < gym.trainers.length) {
+                // Next trainer
+                const trainer = gym.trainers[gymState.trainerIndex];
+                battle.textQueue = [trainer.name + ' wants to battle!'];
+                battle.text = battle.textQueue.shift();
+                battle.phase = 'show_text';
+                battle.nextPhase = null;
+                battle.pendingGymBattle = { species: trainer.team[0], level: trainer.level, name: trainer.name, isGymTrainer: true };
+              } else {
+                // All trainers defeated, time for leader
+                gymState.phase = 'leader';
+                battle.textQueue = [
+                  gym.leader + ': You\'ve made it past my trainers!',
+                  'Now face me, the Gym Leader!'
+                ];
+                battle.text = battle.textQueue.shift();
+                battle.phase = 'show_text';
+                battle.nextPhase = null;
+                battle.pendingGymBattle = { species: gym.leaderTeam[0].species, level: gym.leaderTeam[0].level, name: gym.leader, isGymLeader: true };
+              }
+            } else if (gymState.phase === 'leader') {
+              // Gym complete!
+              player.badges++;
+              player.money += gym.reward;
+              playSFX('badge');
+              gymState = { gymKey: null, phase: 'trainers', trainerIndex: 0 };
+              battle.textQueue = [
+                'You earned the ' + gym.badge + '!',
+                'Received $' + gym.reward + '!',
+                'Badge count: ' + player.badges
+              ];
+              battle.text = battle.textQueue.shift();
+              battle.phase = 'show_text';
+              battle.nextPhase = null;
+              battle.returnToOverworld = true;
+            } else {
+              gameState = STATE.OVERWORLD;
+            }
+          } else {
+            gameState = STATE.OVERWORLD;
+          }
+          break;
+
+        case 'defeat':
+          if (battle.textQueue.length > 0) {
+            if (justDown('a')) {
+              battle.text = battle.textQueue.shift();
+            }
+          } else {
+            // Heal and return to town
+            player.team.forEach(c => c.hp = c.maxHP);
+            loadArea('town');
+            player.x = 14;
+            player.y = 18;
+            gameState = STATE.OVERWORLD;
+          }
+          break;
+
+        case 'run':
+          gameState = STATE.OVERWORLD;
+          break;
+      }
+    }
+
+    function executeBattleTurn() {
+      // Skip dead attackers iteratively (no recursion)
+      while (battle.turnIndex < battle.turnOrder.length) {
+        const turn = battle.turnOrder[battle.turnIndex];
+        const attacker = turn.who === 'player' ? battle.playerMon : battle.enemy;
+        if (attacker.hp <= 0) {
+          battle.turnIndex++;
+          continue;
+        }
+        break; // found a living attacker
+      }
+
+      if (battle.turnIndex >= battle.turnOrder.length) {
+        // Check states
+        if (battle.enemyFainted) {
+          // Victory
+          const exp = Math.floor(battle.enemy.level * 8 + 20);
+          battle.textQueue = [battle.enemy.name + ' was defeated!', 'Earned ' + exp + ' EXP!'];
+          // Give EXP
+          battle.playerMon.exp += exp;
+          while (battle.playerMon.exp >= battle.playerMon.expToNext) {
+            battle.playerMon.exp -= battle.playerMon.expToNext;
+            battle.playerMon.level++;
+            battle.playerMon.expToNext = expForLevel(battle.playerMon.level);
+            // Stat increases
+            const sp = SPECIES[battle.playerMon.species];
+            battle.playerMon.maxHP += Math.floor(sp.baseHP / 15) + 1;
+            battle.playerMon.atk += Math.floor(sp.baseAtk / 20) + 1;
+            battle.playerMon.def += Math.floor(sp.baseDef / 20) + 1;
+            battle.playerMon.spd += Math.floor(sp.baseSpd / 20) + 1;
+            battle.playerMon.baseMaxHP = battle.playerMon.maxHP;
+            battle.playerMon.baseAtk = battle.playerMon.atk;
+            battle.playerMon.baseDef = battle.playerMon.def;
+            battle.playerMon.baseSpd = battle.playerMon.spd;
+            battle.playerMon.hp = battle.playerMon.maxHP;
+            battle.textQueue.push(battle.playerMon.name + ' grew to level ' + battle.playerMon.level + '!');
+            playSFX('levelup');
+
+            // Check evolution
+            if (sp.evolveLevel && battle.playerMon.level >= sp.evolveLevel && sp.evolveTo) {
+              battle.textQueue.push(battle.playerMon.name + ' is evolving!');
+              battle.playerMon.species = sp.evolveTo;
+              const newSp = SPECIES[sp.evolveTo];
+              battle.playerMon.name = newSp.name;
+              battle.playerMon.type = newSp.type;
+              battle.playerMon.moves = newSp.moves.slice(0, 3);
+              battle.textQueue.push('Evolved into ' + newSp.name + '!');
+            }
+          }
+          if (battle.isTrainer) {
+            battle.textQueue.push(battle.trainerName + ' was defeated!');
+            player.money += 200 + battle.enemy.level * 20;
+            battle.textQueue.push('Won $' + (200 + battle.enemy.level * 20) + '!');
+          }
+          battle.text = battle.textQueue.shift();
+          battle.phase = 'show_text';
+          battle.animTimer = 0;
+          battle.nextPhase = 'victory';
+          return;
+        }
+        if (battle.playerFainted) {
+          // Try next pokemon
+          let found = false;
+          for (const c of player.team) {
+            if (c.hp > 0) {
+              battle.playerMon = c;
+              battle.textQueue = ['Go, ' + c.name + '!'];
+              battle.text = battle.textQueue.shift();
+              battle.phase = 'show_text';
+              battle.playerFainted = false;
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            battle.textQueue = ['All your Cinamon fainted!', 'You blacked out...'];
+            battle.text = battle.textQueue.shift();
+            battle.phase = 'show_text';
+            battle.nextPhase = 'defeat';
+          }
+          return;
+        }
+        battle.phase = 'select';
+        return;
+      }
+
+      const turn = battle.turnOrder[battle.turnIndex];
+      const attacker = turn.who === 'player' ? battle.playerMon : battle.enemy;
+      const defender = turn.who === 'player' ? battle.enemy : battle.playerMon;
+
+      const moveName = turn.move;
+      const m = MOVES[moveName];
+
+      // Handle status moves
+      if (m && m.power === 0) {
+        let effMsg = '';
+        if (moveName === 'Harden' || moveName === 'Agility') {
+          attacker.def += 2;
+          effMsg = attacker.name + '\'s defense rose!';
+        } else if (moveName === 'Leech Seed') {
+          effMsg = defender.name + ' was seeded!';
+        } else if (moveName === 'String Shot') {
+          defender.spd = Math.max(1, defender.spd - 2);
+          effMsg = defender.name + '\'s speed fell!';
+        } else if (moveName === 'Smokescreen') {
+          effMsg = defender.name + '\'s accuracy fell!';
+        } else if (moveName === 'Rest') {
+          attacker.hp = attacker.maxHP;
+          effMsg = attacker.name + ' fully healed!';
+        } else if (moveName === 'Tail Whip') {
+          defender.def = Math.max(1, defender.def - 2);
+          effMsg = defender.name + '\'s defense fell!';
+        } else {
+          effMsg = attacker.name + ' used ' + moveName + '!';
+        }
+        battle.textQueue = [effMsg];
+      } else {
+        const damage = calcDamage(attacker, defender, moveName);
+        if (damage === -1) {
+          battle.textQueue = [attacker.name + ' used ' + moveName + ' but missed!'];
+        } else {
+          defender.hp -= damage;
+          if (defender.hp < 0) defender.hp = 0;
+          playSFX('hit');
+          const eff = typeEff(m.type, defender.type);
+          let msg = attacker.name + ' used ' + moveName + '!';
+          if (eff > 1) msg += ' Super effective!';
+          if (eff < 1 && eff > 0) msg += ' Not very effective...';
+          battle.textQueue = [msg];
+          if (defender.hp <= 0) {
+            battle.textQueue.push(defender.name + ' fainted!');
+            if (turn.who === 'player') battle.enemyFainted = true;
+            else battle.playerFainted = true;
+            battle.nextPhase = 'execute_turn';
+          }
+        }
+      }
+
+      battle.text = battle.textQueue.shift();
+      battle.phase = 'show_text';
+      battle.turnIndex++;
+      battle.animTimer = 0;
+    }
+
+    function drawBattle() {
+      // Battle background
+      ctx.fillStyle = '#1a3a2a';
+      ctx.fillRect(0, 0, NATIVE_W, NATIVE_H);
+
+      // Ground
+      ctx.fillStyle = '#4a4';
+      ctx.fillRect(0, 100, NATIVE_W, 60);
+      ctx.fillStyle = '#5b5';
+      ctx.fillRect(0, 160, NATIVE_W, 30);
+      ctx.fillStyle = '#6c6';
+      ctx.fillRect(0, 190, NATIVE_W, 60);
+
+      // Enemy creature
+      const ex = NATIVE_W - 80;
+      const ey = 50;
+      drawCreature(ex, ey, battle.enemy.species, 40, false);
+
+      // Enemy info
+      ctx.fillStyle = '#112';
+      ctx.fillRect(4, 10, 110, 28);
+      ctx.strokeStyle = '#fff';
+      ctx.strokeRect(4, 10, 110, 28);
+      ctx.font = '7px monospace';
+      ctx.fillStyle = '#fff';
+      ctx.fillText(battle.enemy.name + ' Lv' + battle.enemy.level, 8, 21);
+      const ehpPct = battle.enemy.hp / battle.enemy.maxHP;
+      ctx.fillStyle = '#333';
+      ctx.fillRect(8, 24, 80, 5);
+      ctx.fillStyle = ehpPct > 0.5 ? '#4a4' : ehpPct > 0.25 ? '#da0' : '#e44';
+      ctx.fillRect(8, 24, 80 * ehpPct, 5);
+      ctx.fillStyle = '#aaa';
+      ctx.fillText(battle.enemy.hp + '/' + battle.enemy.maxHP, 90, 29);
+
+      // Player creature (back view - simpler)
+      const px = 60;
+      const py = 165;
+      if (battle.playerMon.hp <= 0) {
+        // Player's creature fainted
+        ctx.fillStyle = '#888'; // Gray out
+        ctx.fillRect(px + 2, py + 2, 40, 40); // Simple gray box
+        ctx.fillStyle = '#333';
+        ctx.font = '7px monospace';
+        ctx.fillText('FAINTED', px + 10, py + 20);
+      } else {
+        drawCreature(px, py, battle.playerMon.species, 44, true);
+      }
+
+      // Player info
+      ctx.fillStyle = '#112';
+      ctx.fillRect(NATIVE_W - 120, 160, 116, 30);
+      ctx.strokeStyle = '#fff';
+      ctx.strokeRect(NATIVE_W - 120, 160, 116, 30);
+      ctx.font = '7px monospace';
+      ctx.fillStyle = '#fff';
+      ctx.fillText(battle.playerMon.name + ' Lv' + battle.playerMon.level, NATIVE_W - 116, 171);
+      const phpPct = battle.playerMon.hp / battle.playerMon.maxHP;
+      ctx.fillStyle = '#333';
+      ctx.fillRect(NATIVE_W - 116, 175, 80, 5);
+      ctx.fillStyle = phpPct > 0.5 ? '#4a4' : phpPct > 0.25 ? '#da0' : '#e44';
+      ctx.fillRect(NATIVE_W - 116, 175, 80 * phpPct, 5);
+      ctx.fillStyle = '#aaa';
+      ctx.fillText(battle.playerMon.hp + '/' + battle.playerMon.maxHP, NATIVE_W - 34, 180);
+
+      // Text box / Battle UI
+      const uiY = VIEW_H * TILE;
+
+      if (battle.phase === 'select' || battle.phase === 'fight') {
+        // Fight menu
+        ctx.fillStyle = '#112';
+        ctx.fillRect(0, uiY, NATIVE_W, NATIVE_H - uiY);
+        ctx.strokeStyle = '#fff';
+        ctx.strokeRect(1, uiY + 1, NATIVE_W - 2, NATIVE_H - uiY - 2);
+
+        if (battle.phase === 'select') {
+          ctx.font = '8px monospace';
+          const opts = battle.canRun ? ['FIGHT', 'BAG', 'RUN', 'SWITCH'] : ['FIGHT', 'BAG', 'SWITCH'];
+          for (let i = 0; i < opts.length; i++) {
+            const col = i % 2;
+            const row = Math.floor(i / 2);
+            if (i === battle.menuCursor) {
+              ctx.fillStyle = '#336';
+              ctx.fillRect(4 + col * 80, uiY + 4 + row * 14, 76, 12);
+            }
+            ctx.fillStyle = i === battle.menuCursor ? '#fe0' : '#fff';
+            ctx.fillText((i === battle.menuCursor ? '▶ ' : '  ') + opts[i], 8 + col * 80, uiY + 14 + row * 14);
+          }
+        } else {
+          // Fight moves
+          ctx.font = '7px monospace';
+          for (let i = 0; i < 4; i++) {
+            const moveName = battle.playerMon.moves[i];
+            if (!moveName) continue;
+            const m = MOVES[moveName];
+            const col = i % 2;
+            const row = Math.floor(i / 2);
+            const x = 8 + col * 80;
+            const y = uiY + 12 + row * 16;
+            if (i === battle.fightCursor) {
+              ctx.fillStyle = '#336';
+              ctx.fillRect(4 + col * 80, uiY + 4 + row * 16, 150, 12);
+            }
+            ctx.fillStyle = i === battle.fightCursor ? '#fe0' : '#fff';
+            ctx.fillText((i === battle.fightCursor ? '▶ ' : '  ') + moveName, x, y);
+            if (m) {
+              ctx.fillStyle = TYPE_COLORS[m.type];
+              ctx.fillText(TYPE_NAMES[m.type], x + (col === 0 ? 60 : 60), y);
+            }
+          }
+          ctx.fillStyle = '#666';
+          ctx.fillText('Z:Select  X:Back', 8, uiY + 42);
+        }
+      } else {
+        // Text box
+        ctx.fillStyle = '#111';
+        ctx.fillRect(0, uiY, NATIVE_W, NATIVE_H - uiY);
+        ctx.strokeStyle = '#fff';
+        ctx.strokeRect(1, uiY + 1, NATIVE_W - 2, NATIVE_H - uiY - 2);
+
+        ctx.font = '8px monospace';
+        ctx.fillStyle = '#fff';
+        if (battle.text) {
+          const maxW = NATIVE_W - 16;
+          let line = '';
+          let ly = uiY + 14;
+          for (const ch of battle.text) {
+            if (ctx.measureText(line + ch).width > maxW) {
+              ctx.fillText(line, 8, ly);
+              ly += 12;
+              line = ch;
+            } else {
+              line += ch;
+            }
+          }
+          ctx.fillText(line, 8, ly);
+        }
+
+        // Continue indicator
+        if ((gameFrame >> 3) % 2 === 0 && battle.phase !== 'catch_anim') {
+          ctx.fillStyle = '#fff';
+          ctx.fillText('▼', NATIVE_W - 14, uiY + (NATIVE_H - uiY) - 6);
+        }
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // TITLE SCREEN
+    // ═══════════════════════════════════════════════════════════════
+
+    let titleCursor = 0;
+    let starterCursor = 0;
+    let titlePhase = 'title'; // title, menu, starter_select
+    let hasSaveData = false;
+
+    function updateTitle() {
+      if (titlePhase === 'title') {
+        if (justDown('a') || justDown('start')) {
+          // Check if save exists
+          hasSaveData = false;
+          try {
+            const raw = localStorage.getItem('cinamon_save');
+            if (raw) {
+              const data = JSON.parse(raw);
+              if (data && data.player && data.player.team && data.player.team.length > 0) {
+                hasSaveData = true;
+              }
+            }
+          } catch (e) { }
+          titlePhase = 'menu';
+          titleCursor = 0;
+        }
+      } else if (titlePhase === 'menu') {
+        const menuItems = hasSaveData ? ['Continue', 'New Game'] : ['New Game'];
+        if (justDown('up')) titleCursor = (titleCursor - 1 + menuItems.length) % menuItems.length;
+        if (justDown('down')) titleCursor = (titleCursor + 1) % menuItems.length;
+        if (justDown('a')) {
+          if (menuItems[titleCursor] === 'Continue') {
+            loadGame();
+            gameState = STATE.OVERWORLD;
+            titlePhase = 'title';
+          } else {
+            titlePhase = 'starter_select';
+            starterCursor = 0;
+          }
+        }
+        if (justDown('b')) {
+          titlePhase = 'title';
+        }
+      } else if (titlePhase === 'starter_select') {
+        if (justDown('left')) starterCursor = (starterCursor - 1 + 3) % 3;
+        if (justDown('right')) starterCursor = (starterCursor + 1) % 3;
+        if (justDown('a')) {
+          const starters = ['sproutling', 'flamling', 'splasher'];
+          player.team = [createCreature(starters[starterCursor], 5)];
+          loadArea('town');
+          player.x = 14;
+          player.y = 18;
+          encounterSteps = 0;
+          gameState = STATE.OVERWORLD;
+          titlePhase = 'title';
+        }
+        if (justDown('b')) {
+          titlePhase = 'menu';
+        }
+      }
+    }
+
+    function drawTitle() {
+      // Background
+      ctx.fillStyle = '#1a0a2e';
+      ctx.fillRect(0, 0, NATIVE_W, NATIVE_H);
+
+      // Stars
+      for (let i = 0; i < 40; i++) {
+        const sx = ((i * 97 + 13) % NATIVE_W);
+        const sy = ((i * 61 + 7) % (VIEW_H * TILE));
+        const brightness = 0.3 + 0.4 * (Math.sin((gameFrame + i * 11) * 0.1) * 0.5 + 0.5);
+        ctx.fillStyle = `rgba(255,255,255,${brightness})`;
+        ctx.fillRect(sx, sy, 1, 1);
+      }
+
+      // Title
+      ctx.font = 'bold 16px monospace';
+      ctx.fillStyle = '#fe8';
+      const titleText = 'C I N A M O N';
+      const tw = ctx.measureText(titleText).width;
+      ctx.fillText(titleText, (NATIVE_W - tw) / 2, 40);
+
+      ctx.font = '8px monospace';
+      ctx.fillStyle = '#aaa';
+      const sub = 'Catch them all!';
+      const sw = ctx.measureText(sub).width;
+      ctx.fillText(sub, (NATIVE_W - sw) / 2, 55);
+
+      if (titlePhase === 'title') {
+        // Animated creatures
+        const t = gameFrame * 0.03;
+        drawCreature(NATIVE_W / 2 - 60 + Math.sin(t) * 10, 90, 'sproutling', 20, false);
+        drawCreature(NATIVE_W / 2, 90 + Math.sin(t + 1) * 5, 'flamling', 20, false);
+        drawCreature(NATIVE_W / 2 + 60 + Math.cos(t) * 10, 90, 'splasher', 20, false);
+
+        // Press start
+        if ((gameFrame >> 4) % 2 === 0) {
+          ctx.fillStyle = '#fe0';
+          const ps = 'Press Z / Tap A to Start';
+          const pw = ctx.measureText(ps).width;
+          ctx.fillText(ps, (NATIVE_W - pw) / 2, 140);
+        }
+
+        // Credits
+        ctx.fillStyle = '#555';
+        const cr = 'A Pokemon-style Adventure';
+        const crw = ctx.measureText(cr).width;
+        ctx.fillText(cr, (NATIVE_W - crw) / 2, 160);
+
+      } else if (titlePhase === 'menu') {
+        // Animated creatures (smaller, in background)
+        const t = gameFrame * 0.03;
+        drawCreature(NATIVE_W / 2 - 60 + Math.sin(t) * 10, 80, 'sproutling', 16, false);
+        drawCreature(NATIVE_W / 2, 80 + Math.sin(t + 1) * 5, 'flamling', 16, false);
+        drawCreature(NATIVE_W / 2 + 60 + Math.cos(t) * 10, 80, 'splasher', 16, false);
+
+        // Menu options
+        const menuItems = hasSaveData ? ['Continue', 'New Game'] : ['New Game'];
+        ctx.font = '10px monospace';
+        for (let i = 0; i < menuItems.length; i++) {
+          const selected = i === titleCursor;
+          ctx.fillStyle = selected ? '#fe0' : '#fff';
+          const text = (selected ? '▶ ' : '  ') + menuItems[i];
+          const tw = ctx.measureText(text).width;
+          ctx.fillText(text, (NATIVE_W - tw) / 2, 120 + i * 16);
+        }
+
+        ctx.fillStyle = '#666';
+        ctx.font = '7px monospace';
+        const hint = '↑↓ Select   Z Confirm';
+        const hw = ctx.measureText(hint).width;
+        ctx.fillText(hint, (NATIVE_W - hw) / 2, 160);
+
+      } else if (titlePhase === 'starter_select') {
+        ctx.fillStyle = '#fe0';
+        ctx.font = '8px monospace';
+        const sel = 'Choose your partner!';
+        const selw = ctx.measureText(sel).width;
+        ctx.fillText(sel, (NATIVE_W - selw) / 2, 75);
+
+        const starters = ['sproutling', 'flamling', 'splasher'];
+        const labels = ['Sproutling', 'Flamling', 'Splasher'];
+        const typeLabels = ['GRASS', 'FIRE', 'WATER'];
+
+        for (let i = 0; i < 3; i++) {
+          const cx = 40 + i * 70;
+          const cy = 110;
+          const selected = i === starterCursor;
+
+          if (selected) {
+            ctx.fillStyle = 'rgba(255,255,100,0.15)';
+            ctx.fillRect(cx - 22, cy - 30, 54, 70);
+            ctx.strokeStyle = '#fe0';
+            ctx.strokeRect(cx - 22, cy - 30, 54, 70);
+          }
+
+          drawCreature(cx, cy, starters[i], 24, false);
+
+          ctx.fillStyle = selected ? '#fe0' : '#fff';
+          ctx.font = '6px monospace';
+          const lw = ctx.measureText(labels[i]).width;
+          ctx.fillText(labels[i], cx - lw / 2, cy + 22);
+
+          ctx.fillStyle = TYPE_COLORS[SPECIES[starters[i]].type];
+          const tlw = ctx.measureText(typeLabels[i]).width;
+          ctx.fillText(typeLabels[i], cx - tlw / 2, cy + 30);
+        }
+
+        ctx.fillStyle = '#888';
+        ctx.font = '7px monospace';
+        const hint = '← → Select   Z Confirm';
+        const hw = ctx.measureText(hint).width;
+        ctx.fillText(hint, (NATIVE_W - hw) / 2, 150);
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // SAVE / LOAD
+    // ═══════════════════════════════════════════════════════════════
+
+    function saveGame() {
+      try {
+        // Save NPC defeated status
+        const npcStatus = {};
+        for (const area in NPCS) {
+          npcStatus[area] = NPCS[area].map(n => !!n.defeated);
+        }
+        const data = {
+          player: player,
+          area: currentArea,
+          gymState: gymState,
+          npcStatus: npcStatus,
+          version: 2,
+        };
+        localStorage.setItem('cinamon_save', JSON.stringify(data));
+      } catch (e) { }
+    }
+
+    function loadGame() {
+      try {
+        const raw = localStorage.getItem('cinamon_save');
+        if (raw) {
+          const data = JSON.parse(raw);
+          if (data && data.player && data.player.team && data.player.team.length > 0) {
+            player = data.player;
+            if (data.gymState) gymState = data.gymState;
+            loadArea(data.area || 'town');
+            // Restore NPC defeated status
+            if (data.npcStatus) {
+              for (const area in data.npcStatus) {
+                if (NPCS[area]) {
+                  for (let i = 0; i < data.npcStatus[area].length; i++) {
+                    if (NPCS[area][i]) NPCS[area][i].defeated = data.npcStatus[area][i];
+                  }
+                }
+              }
+              // Re-apply to current map objects
+              if (mapObjects.length > 0) {
+                const areaNpcs = NPCS[currentArea];
+                if (areaNpcs) {
+                  for (let i = 0; i < mapObjects.length && i < areaNpcs.length; i++) {
+                    mapObjects[i].defeated = areaNpcs[i].defeated;
+                  }
+                }
+              }
+            }
+            return true;
+          }
+        }
+      } catch (e) { }
+      return false;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // MAIN GAME LOOP
+    // ═══════════════════════════════════════════════════════════════
+
+    // Start at title screen - don't auto-load
+    loadArea('town');
+
+    function gameLoop() {
+      gameFrame++;
+      const dt = 1000 / 60; // ~16.67ms per frame
+
+      // Update music
+      checkMusic();
+      updateMusic(dt);
+
+      // Clear
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, NATIVE_W, NATIVE_H);
+
+      // Update & Draw based on state
+      switch (gameState) {
+        case STATE.TITLE:
+          updateTitle();
+          drawTitle();
+          break;
+        case STATE.OVERWORLD:
+          updateOverworld();
+          drawOverworld();
+          break;
+        case STATE.BATTLE:
+          updateBattle();
+          drawBattle();
+          break;
+        case STATE.MENU:
+          updateMenu();
+          drawMenu();
+          break;
+        case STATE.DIALOGUE:
+          updateDialogue();
+          drawDialogue();
+          break;
+        case STATE.TEAM_MENU:
+          updateTeamMenu();
+          drawTeamMenu();
+          break;
+        case STATE.BAG_MENU:
+          updateBagMenu();
+          drawBagMenu();
+          break;
+      }
+
+      clearJustPressed();
+      requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+
+  </script>
+</body>
+
+</html>
