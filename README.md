@@ -13,7 +13,7 @@ Simply open `cinamon/index.html` in any modern browser. That's it. No server req
 ```bash
 git clone https://github.com/lw-xiong/cinamon.git
 cd cinamon
-open index.html
+open cinamon.html
 ```
 
 ---
